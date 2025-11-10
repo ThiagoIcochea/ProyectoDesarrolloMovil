@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 public class Personal {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_personal")
     private Integer idPersonal;
 
