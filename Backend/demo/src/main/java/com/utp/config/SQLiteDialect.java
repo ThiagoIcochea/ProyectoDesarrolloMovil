@@ -89,6 +89,6 @@ class SQLiteIdentityColumnSupport extends IdentityColumnSupportImpl {
 
     @Override
     public String getIdentityColumnString(int type) throws MappingException {
-        return "integer primary key autoincrement";
+        return "integer primary key autoincrement not null";
     }
 }
