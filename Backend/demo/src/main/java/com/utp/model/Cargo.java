@@ -12,7 +12,6 @@ import jakarta.persistence.*;
 public class Cargo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_cargo")
     private Integer id_cargo;
     private String descripcion;
     private String estado;
