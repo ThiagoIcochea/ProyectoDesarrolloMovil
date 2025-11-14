@@ -9,4 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.utp.model.Personal;
 
 public interface PersonalRepository extends JpaRepository<Personal, Integer> {
+    Personal findByEmail(String email);
+
 }
