@@ -25,5 +25,5 @@ public class Usuario {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     private String estado = "ACTIVO";
-    private LocalDate fechaCreacion = LocalDate.now();
+    private String fechaCreacion = LocalDate.now().toString();
 }

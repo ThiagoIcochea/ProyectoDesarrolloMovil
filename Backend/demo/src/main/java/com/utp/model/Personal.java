@@ -23,7 +23,7 @@ public class Personal {
     private String apellPaterno;
     private String apellMaterno;
     private String nroDocumento;
-    private LocalDate fechaNacimiento;
-    private LocalDate fechaIngreso;
+    private  String  fechaNacimiento;
+    private  String  fechaIngreso;
     private String email;
 }
