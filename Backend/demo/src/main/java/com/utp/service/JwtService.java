@@ -19,18 +19,18 @@ public class JwtService {
             Base64.getEncoder().encode(SECRET_KEY_STRING.getBytes())
     );
 
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60; // 1 hora
+    private static final long EXPIRATION_TIME = 1000 * 60 * 60; 
 
     public String generateToken(Usuario usuario) {
-        // Validamos si Personal y Cargo existen
-        String rol = "SinRol";
+       
+        String cargo = "SinRol";
         if (usuario.getPersonal() != null && usuario.getPersonal().getCargo() != null) {
-            rol = usuario.getPersonal().getCargo().getDescripcion();
+            cargo = usuario.getPersonal().getCargo().getDescripcion();
         }
 
         return Jwts.builder()
                 .setSubject(usuario.getUsuario())
-                .claim("role", rol)
+                .claim("cargo",cargo)
                 .claim("id", usuario.getIdUsuario())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
@@ -51,9 +51,9 @@ public class JwtService {
         return extractAllClaims(token).getSubject();
     }
 
-    public String extractRole(String token) {
-        String rol = extractAllClaims(token).get("role", String.class);
-        return rol != null ? rol.trim() : "";
+    public String extractCargo(String token) {
+        String cargo = extractAllClaims(token).get("cargo", String.class);
+        return cargo != null ? cargo.trim() : "";
     }
 
     public Integer extractId(String token) {

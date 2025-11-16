@@ -8,9 +8,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.utp.model.Cargo;
 import com.utp.model.Personal;
 import com.utp.model.Usuario;
+import com.utp.model.Rol;
+
 import com.utp.repository.CargoRepository;
 import com.utp.repository.PersonalRepository;
 import com.utp.repository.UsuarioRepository;
+import com.utp.repository.RolRepository;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -25,62 +28,110 @@ public class DataInitializer implements CommandLineRunner {
     private UsuarioRepository usuarioRepo;
 
     @Autowired
+    private RolRepository rolRepo;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
 
-        // =============================
-        // 1. CREAR CARGO
-        // =============================
-        Cargo cargo = cargoRepo.findByDescripcion("Administrador de Sistemas");
-        if (cargo == null) {
-            cargo = new Cargo();
-            cargo.setDescripcion("Administrador de Sistemas");
-            cargo.setEstado("ACTIVO");
+    
+        Rol rolAdmin = rolRepo.findByDescripcion("Administrador de Sistemas");
+        if (rolAdmin == null) {
+            rolAdmin = new Rol();
+            rolAdmin.setDescripcion("Administrador");
+            rolAdmin.setEstado("ACTIVO");
+            rolRepo.save(rolAdmin);
+            System.out.println("✔ Rol creado: Administrador de Sistemas");
+        }
 
-            cargoRepo.save(cargo);
+        Rol rolEmpleado = rolRepo.findByDescripcion("Empleado");
+        if (rolEmpleado == null) {
+            rolEmpleado = new Rol();
+            rolEmpleado.setDescripcion("Empleado");
+            rolEmpleado.setEstado("ACTIVO");
+            rolRepo.save(rolEmpleado);
+            System.out.println("✔ Rol creado: Empleado");
+        }
+
+    
+        Cargo cargoAdmin = cargoRepo.findByDescripcion("Administrador de Sistemas");
+        if (cargoAdmin == null) {
+            cargoAdmin = new Cargo();
+            cargoAdmin.setDescripcion("Administrador de Sistemas");
+            cargoAdmin.setEstado("ACTIVO");
+            cargoRepo.save(cargoAdmin);
             System.out.println("✔ Cargo creado: Administrador de Sistemas");
         }
 
-        // =============================
-        // 2. CREAR PERSONAL
-        // =============================
-        Personal personal = personalRepo.findByEmail("admin@system.com");
-        if (personal == null) {
-            personal = new Personal();
-            personal.setNombre("Admin");
-            personal.setApellPaterno("System");
-            personal.setApellMaterno("Root");
-            personal.setEmail("admin@system.com");
-            personal.setNroDocumento("00000000");
-            personal.setIdTipoDocumento(1);
-            personal.setFechaIngreso("2020-01-01");
-            personal.setFechaNacimiento("1990-01-01");
-            personal.setCargo(cargo);
-
-            personalRepo.save(personal);
-            System.out.println("✔ Personal administrador creado");
+        Cargo cargoEmpleado = cargoRepo.findByDescripcion("Empleado");
+        if (cargoEmpleado == null) {
+            cargoEmpleado = new Cargo();
+            cargoEmpleado.setDescripcion("Empleado de Planta");
+            cargoEmpleado.setEstado("ACTIVO");
+            cargoRepo.save(cargoEmpleado);
+            System.out.println("✔ Cargo creado: Empleado");
         }
 
-        // =============================
-        // 3. CREAR USUARIO ADMIN
-        // =============================
-        Usuario user = usuarioRepo.findByUsuario("admin");
-        if (user == null) {
-            user = new Usuario();
-            user.setUsuario("admin");
+       
+        Personal personalAdmin = personalRepo.findByEmail("admin@system.com");
+        if (personalAdmin == null) {
+            personalAdmin = new Personal();
+            personalAdmin.setNombre("Admin");
+            personalAdmin.setApellPaterno("System");
+            personalAdmin.setApellMaterno("Root");
+            personalAdmin.setEmail("admin@system.com");
+            personalAdmin.setNroDocumento("00000000");
+            personalAdmin.setIdTipoDocumento(1);
+            personalAdmin.setFechaIngreso("2020-01-01");
+            personalAdmin.setFechaNacimiento("1990-01-01");
+            personalAdmin.setCargo(cargoAdmin);
+            personalRepo.save(personalAdmin);
+            System.out.println("✔ Personal admin creado");
+        }
 
-            // 🔥 ENCRIPTAR CONTRASEÑA
-            String hash = passwordEncoder.encode("admin123");
-            user.setPassword(hash);
+      
+        Personal personalEmpleado = personalRepo.findByEmail("empleado@test.com");
+        if (personalEmpleado == null) {
+            personalEmpleado = new Personal();
+            personalEmpleado.setNombre("Carlos");
+            personalEmpleado.setApellPaterno("Empleado");
+            personalEmpleado.setApellMaterno("Prueba");
+            personalEmpleado.setEmail("empleado@test.com");
+            personalEmpleado.setNroDocumento("11111111");
+            personalEmpleado.setIdTipoDocumento(1);
+            personalEmpleado.setFechaIngreso("2022-01-01");
+            personalEmpleado.setFechaNacimiento("2000-01-01");
+            personalEmpleado.setCargo(cargoEmpleado);
+            personalRepo.save(personalEmpleado);
+            System.out.println("✔ Personal empleado creado");
+        }
 
-            user.setEstado("ACTIVO");
-            user.setIdRol(1);
-            user.setPersonal(personal);
-
-            usuarioRepo.save(user);
+   
+        Usuario userAdmin = usuarioRepo.findByUsuario("admin");
+        if (userAdmin == null) {
+            userAdmin = new Usuario();
+            userAdmin.setUsuario("admin");
+            userAdmin.setPassword(passwordEncoder.encode("admin123"));
+            userAdmin.setEstado("ACTIVO");
+            userAdmin.setRol(rolAdmin); // ⭐ RELACIÓN CORRECTA
+            userAdmin.setPersonal(personalAdmin);
+            usuarioRepo.save(userAdmin);
             System.out.println("✔ Usuario administrador creado");
+        }
+
+       
+        Usuario userEmpleado = usuarioRepo.findByUsuario("empleado");
+        if (userEmpleado == null) {
+            userEmpleado = new Usuario();
+            userEmpleado.setUsuario("empleado");
+            userEmpleado.setPassword(passwordEncoder.encode("123456"));
+            userEmpleado.setEstado("ACTIVO");
+            userEmpleado.setRol(rolEmpleado); // ⭐ RELACIÓN CORRECTA
+            userEmpleado.setPersonal(personalEmpleado);
+            usuarioRepo.save(userEmpleado);
+            System.out.println("✔ Usuario empleado creado");
         }
 
         System.out.println("✔ Datos iniciales cargados correctamente");

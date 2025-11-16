@@ -38,12 +38,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwtService.validateToken(token)) {
                 String username = jwtService.extractUsername(token);
-                String role = jwtService.extractRole(token).trim();
+                String cargo = jwtService.extractCargo(token).trim();
 
-                System.out.println("Role extraído para Spring Security: '" + role + "'");
+                System.out.println("Cargo extraído para Spring Security: '" + cargo + "'");
 
                 List<SimpleGrantedAuthority> authorities =
-                        List.of(new SimpleGrantedAuthority(role));
+                        List.of(new SimpleGrantedAuthority(cargo));
 
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
@@ -52,12 +52,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 authorities
                         );
 
-                // 🚀 ESTA LÍNEA ES LA QUE FALTABA
+             
                 auth.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
 
-                // 🚀 Y ESTA ES LA QUE HACE QUE SPRING YA NO LO BORRE
+             
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         }

@@ -15,7 +15,9 @@ public class Usuario {
     @Column(name = "id_usuario")
     private Integer idUsuario;
 
-    private Integer idRol;
+    @ManyToOne
+    @JoinColumn(name = "id_rol")   
+    private Rol rol;
 
     @ManyToOne
     @JoinColumn(name = "id_personal")

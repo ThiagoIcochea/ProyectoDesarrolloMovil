@@ -3,17 +3,10 @@ package com.utp.controller;
 import com.utp.model.Usuario;
 import com.utp.service.UsuarioService;
 import com.utp.service.JwtService;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
-
-
-import com.utp.model.Usuario;
-import com.utp.service.UsuarioService;
-import com.utp.service.JwtService;
-
-
-
 
 import java.util.List;
 
@@ -29,83 +22,109 @@ public class UsuarioController {
         this.service = service;
         this.jwtService = jwtService;
     }
-
+   
     @GetMapping
     public List<Usuario> listar(@RequestHeader("Authorization") String tokenHeader) {
-    System.out.println("Token recibido: " + tokenHeader);
-    String token = tokenHeader.replace("Bearer ", "");
-    System.out.println("Token limpio: " + token);
-    
-    if(!jwtService.validateToken(token)){
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token inválido");
-    }
 
-    String role = jwtService.extractRole(token);
-    System.out.println("Rol extraído: " + role);
-
-    if (!role.equals("Administrador de Sistemas")) {
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para listar usuarios");
-    }
-
-    return service.listar();
-    }
-
-    @GetMapping("/{id}")
-    public Usuario obtener(@PathVariable Integer id, @RequestHeader("Authorization") String tokenHeader) {
         String token = tokenHeader.replace("Bearer ", "");
-        String role = jwtService.extractRole(token);
-        Integer userId = jwtService.extractId(token);
+        String cargo = jwtService.extractCargo(token);
+        Integer idUsuarioToken = jwtService.extractId(token);
 
-        if (!role.equals("Administrador de Sistemas") && !id.equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes ver los datos de otro usuario");
+        if (cargo.equals("Administrador de Sistemas")) {
+            return service.listar();
         }
 
-        return service.obtener(id);
+       
+        Usuario miUsuario = service.obtener(idUsuarioToken);
+        return List.of(miUsuario);
     }
 
-    @PostMapping
-    public Usuario crear(@RequestBody Usuario u, @RequestHeader("Authorization") String tokenHeader) {
-        String token = tokenHeader.replace("Bearer ", "");
-        String role = jwtService.extractRole(token);
 
-        if (!role.equals("Administrador de Sistemas")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para crear usuarios");
+ 
+    @GetMapping("/{id}")
+    public Usuario obtener(@PathVariable Integer id,
+                           @RequestHeader("Authorization") String tokenHeader) {
+
+        String token = tokenHeader.replace("Bearer ", "");
+        String cargo = jwtService.extractCargo(token);
+        Integer idUsuarioToken = jwtService.extractId(token);
+
+        if (cargo.equals("Administrador de Sistemas")) {
+            return service.obtener(id);
+        }
+
+        
+        return service.obtener(idUsuarioToken);
+    }
+
+
+   
+    @PostMapping
+    public Usuario crear(@RequestBody Usuario u,
+                         @RequestHeader("Authorization") String tokenHeader) {
+
+        String token = tokenHeader.replace("Bearer ", "");
+        String cargo = jwtService.extractCargo(token);
+
+        if (!cargo.equals("Administrador de Sistemas")) {
+         
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo los administradores pueden crear usuarios");
         }
 
         return service.registrar(u);
     }
 
-    @PutMapping("/{id}")
-    public Usuario actualizar(@PathVariable Integer id, @RequestBody Usuario nuevo,
-                              @RequestHeader("Authorization") String tokenHeader) {
-        String token = tokenHeader.replace("Bearer ", "");
-        String role = jwtService.extractRole(token);
 
-        if (!role.equals("Administrador de Sistemas")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para actualizar usuarios");
+    @PutMapping("/{id}")
+    public Usuario actualizar(@PathVariable Integer id,
+                              @RequestBody Usuario nuevo,
+                              @RequestHeader("Authorization") String tokenHeader) {
+
+        String token = tokenHeader.replace("Bearer ", "");
+        String cargo = jwtService.extractCargo(token);
+        Integer idUsuarioToken = jwtService.extractId(token);
+
+        if (cargo.equals("Administrador de Sistemas")) {
+            return service.actualizar(id, nuevo);
         }
 
-        return service.actualizar(id, nuevo);
+        
+        if (!idUsuarioToken.equals(id)) {
+            
+            return service.actualizar(idUsuarioToken, nuevo);
+        }
+
+        return service.actualizar(idUsuarioToken, nuevo);
     }
 
-    @DeleteMapping("/{id}")
-    public void eliminar(@PathVariable Integer id, @RequestHeader("Authorization") String tokenHeader) {
-        String token = tokenHeader.replace("Bearer ", "");
-        String role = jwtService.extractRole(token);
 
-        if (!role.equals("Administrador de Sistemas")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para eliminar usuarios");
+  
+    @DeleteMapping("/{id}")
+    public void eliminar(@PathVariable Integer id,
+                         @RequestHeader("Authorization") String tokenHeader) {
+
+        String token = tokenHeader.replace("Bearer ", "");
+        String cargo = jwtService.extractCargo(token);
+
+        if (!cargo.equals("Administrador de Sistemas")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo los administradores pueden eliminar usuarios");
         }
 
         service.eliminar(id);
     }
 
+
+   
     @PostMapping("/login")
-   public String login(@RequestBody Usuario u) {
-    Usuario usuario = service.login(u.getUsuario(), u.getPassword());
-    if (usuario != null) {
-        return jwtService.generateToken(usuario);
+    public String login(@RequestBody Usuario u) {
+        Usuario usuario = service.login(u.getUsuario(), u.getPassword());
+        if (usuario != null) {
+            return jwtService.generateToken(usuario);
+        }
+
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                "Credenciales incorrectas");
     }
-    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
-}
 }

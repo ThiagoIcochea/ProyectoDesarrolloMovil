@@ -30,8 +30,18 @@ public class SecurityConfig {
                 }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/personal/**","/api/personal").hasAuthority("Administrador de Sistemas")
-                .requestMatchers("/api/usuario/**","/api/usuario").hasAuthority("Administrador de Sistemas")
+
+                
+                .requestMatchers("/api/personal/**", "/api/personal").authenticated()
+                .requestMatchers("/api/usuario/**", "/api/usuario").authenticated()
+                .requestMatchers("/api/documento/**", "/api/documento").hasAuthority("Administrador de Sistemas")
+                
+               
+                .requestMatchers("/api/autorizacion/**").authenticated()
+
+                
+                .requestMatchers("/api/movimiento/**").authenticated()
+                .requestMatchers("/api/asistencia/**").authenticated()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

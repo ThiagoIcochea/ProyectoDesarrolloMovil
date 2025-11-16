@@ -48,7 +48,7 @@ public class UsuarioService {
 
             u.setUsuario(nuevo.getUsuario());
             u.setEstado(nuevo.getEstado());
-            u.setIdRol(nuevo.getIdRol());
+            u.setRol(nuevo.getRol());
             u.setPersonal(nuevo.getPersonal());
 
             if (nuevo.getPassword() != null && !nuevo.getPassword().isEmpty()) {

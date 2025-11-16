@@ -21,18 +21,18 @@ public class AuthController {
         this.jwtService = jwtService;
     }
 
-    // 🔹 LOGIN
+ 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Usuario loginRequest) {
         try {
-            // Obtener usuario completo de la DB
+            
             Usuario usuario = usuarioService.obtenerPorUsuario(loginRequest.getUsuario());
 
             if (usuario == null || !usuarioService.validarLogin(usuario.getUsuario(), loginRequest.getPassword())) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas");
             }
 
-            // Generar token con objeto Usuario completo
+            
             String token = jwtService.generateToken(usuario);
 
             return ResponseEntity.ok(token);
@@ -43,7 +43,7 @@ public class AuthController {
         }
     }
 
-    // 🔹 Validar token
+  
     @GetMapping("/validar")
     public ResponseEntity<?> validarToken(@RequestHeader("Authorization") String token) {
         try {
