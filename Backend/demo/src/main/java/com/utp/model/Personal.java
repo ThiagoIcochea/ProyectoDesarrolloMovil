@@ -18,7 +18,9 @@ public class Personal {
     @JoinColumn(name = "id_cargo")
     private Cargo cargo;
 
-    private Integer idTipoDocumento;
+    @ManyToOne
+    @JoinColumn(name = "id_documento")
+    private Documento documento;
     private String nombre;
     private String apellPaterno;
     private String apellMaterno;

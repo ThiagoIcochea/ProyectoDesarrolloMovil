@@ -9,5 +9,6 @@ import com.utp.model.Documento;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DocumentoRepository extends JpaRepository<Documento, Integer> {
+    Documento findByDescripcion(String descripcion);
 }
 

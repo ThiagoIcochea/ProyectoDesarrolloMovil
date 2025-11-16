@@ -9,11 +9,13 @@ import com.utp.model.Cargo;
 import com.utp.model.Personal;
 import com.utp.model.Usuario;
 import com.utp.model.Rol;
+import com.utp.model.Documento;
 
 import com.utp.repository.CargoRepository;
 import com.utp.repository.PersonalRepository;
 import com.utp.repository.UsuarioRepository;
 import com.utp.repository.RolRepository;
+import com.utp.repository.DocumentoRepository;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -31,17 +33,26 @@ public class DataInitializer implements CommandLineRunner {
     private RolRepository rolRepo;
 
     @Autowired
+    private DocumentoRepository documentoRepo;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
 
-    
+        Documento docDni = documentoRepo.findByDescripcion("DNI");
+        if (docDni == null) {
+            docDni = new Documento();
+            docDni.setDescripcion("DNI");
+            documentoRepo.save(docDni);
+            System.out.println("✔ Documento creado: DNI");
+        }
+
         Rol rolAdmin = rolRepo.findByDescripcion("Administrador de Sistemas");
         if (rolAdmin == null) {
             rolAdmin = new Rol();
-            rolAdmin.setDescripcion("Administrador");
-            rolAdmin.setEstado("ACTIVO");
+            rolAdmin.setDescripcion("Administrador de Sistemas");
             rolRepo.save(rolAdmin);
             System.out.println("✔ Rol creado: Administrador de Sistemas");
         }
@@ -50,31 +61,26 @@ public class DataInitializer implements CommandLineRunner {
         if (rolEmpleado == null) {
             rolEmpleado = new Rol();
             rolEmpleado.setDescripcion("Empleado");
-            rolEmpleado.setEstado("ACTIVO");
             rolRepo.save(rolEmpleado);
             System.out.println("✔ Rol creado: Empleado");
         }
 
-    
         Cargo cargoAdmin = cargoRepo.findByDescripcion("Administrador de Sistemas");
         if (cargoAdmin == null) {
             cargoAdmin = new Cargo();
             cargoAdmin.setDescripcion("Administrador de Sistemas");
-            cargoAdmin.setEstado("ACTIVO");
             cargoRepo.save(cargoAdmin);
             System.out.println("✔ Cargo creado: Administrador de Sistemas");
         }
 
-        Cargo cargoEmpleado = cargoRepo.findByDescripcion("Empleado");
+        Cargo cargoEmpleado = cargoRepo.findByDescripcion("Empleado de Planta");
         if (cargoEmpleado == null) {
             cargoEmpleado = new Cargo();
             cargoEmpleado.setDescripcion("Empleado de Planta");
-            cargoEmpleado.setEstado("ACTIVO");
             cargoRepo.save(cargoEmpleado);
-            System.out.println("✔ Cargo creado: Empleado");
+            System.out.println("✔ Cargo creado: Empleado de Planta");
         }
 
-       
         Personal personalAdmin = personalRepo.findByEmail("admin@system.com");
         if (personalAdmin == null) {
             personalAdmin = new Personal();
@@ -83,7 +89,7 @@ public class DataInitializer implements CommandLineRunner {
             personalAdmin.setApellMaterno("Root");
             personalAdmin.setEmail("admin@system.com");
             personalAdmin.setNroDocumento("00000000");
-            personalAdmin.setIdTipoDocumento(1);
+            personalAdmin.setDocumento(docDni);
             personalAdmin.setFechaIngreso("2020-01-01");
             personalAdmin.setFechaNacimiento("1990-01-01");
             personalAdmin.setCargo(cargoAdmin);
@@ -91,7 +97,6 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("✔ Personal admin creado");
         }
 
-      
         Personal personalEmpleado = personalRepo.findByEmail("empleado@test.com");
         if (personalEmpleado == null) {
             personalEmpleado = new Personal();
@@ -100,7 +105,7 @@ public class DataInitializer implements CommandLineRunner {
             personalEmpleado.setApellMaterno("Prueba");
             personalEmpleado.setEmail("empleado@test.com");
             personalEmpleado.setNroDocumento("11111111");
-            personalEmpleado.setIdTipoDocumento(1);
+            personalEmpleado.setDocumento(docDni);
             personalEmpleado.setFechaIngreso("2022-01-01");
             personalEmpleado.setFechaNacimiento("2000-01-01");
             personalEmpleado.setCargo(cargoEmpleado);
@@ -108,27 +113,25 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("✔ Personal empleado creado");
         }
 
-   
         Usuario userAdmin = usuarioRepo.findByUsuario("admin");
         if (userAdmin == null) {
             userAdmin = new Usuario();
             userAdmin.setUsuario("admin");
             userAdmin.setPassword(passwordEncoder.encode("admin123"));
             userAdmin.setEstado("ACTIVO");
-            userAdmin.setRol(rolAdmin); // ⭐ RELACIÓN CORRECTA
+            userAdmin.setRol(rolAdmin);
             userAdmin.setPersonal(personalAdmin);
             usuarioRepo.save(userAdmin);
             System.out.println("✔ Usuario administrador creado");
         }
 
-       
         Usuario userEmpleado = usuarioRepo.findByUsuario("empleado");
         if (userEmpleado == null) {
             userEmpleado = new Usuario();
             userEmpleado.setUsuario("empleado");
             userEmpleado.setPassword(passwordEncoder.encode("123456"));
             userEmpleado.setEstado("ACTIVO");
-            userEmpleado.setRol(rolEmpleado); // ⭐ RELACIÓN CORRECTA
+            userEmpleado.setRol(rolEmpleado);
             userEmpleado.setPersonal(personalEmpleado);
             usuarioRepo.save(userEmpleado);
             System.out.println("✔ Usuario empleado creado");

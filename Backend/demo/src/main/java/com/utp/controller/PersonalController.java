@@ -155,7 +155,7 @@ public class PersonalController {
             p.setNroDocumento(nuevo.getNroDocumento());
             p.setFechaIngreso(nuevo.getFechaIngreso());
             p.setFechaNacimiento(nuevo.getFechaNacimiento());
-            p.setIdTipoDocumento(nuevo.getIdTipoDocumento());
+            p.setDocumento(nuevo.getDocumento());
 
             if (cargo.equals("Administrador de Sistemas") && nuevo.getCargo() != null) {
                 Cargo cargoObj = cargoRepo.findById(nuevo.getCargo().getIdCargo()).orElse(null);
