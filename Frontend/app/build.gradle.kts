@@ -52,17 +52,12 @@ dependencies {
 // ---- RETROFIT ----
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    dependencies {
-        // ... existing dependencies
-        implementation("com.squareup.retrofit2:converter-scalars:2.9.0") // Add this line
-    }
-
-
+    implementation("com.squareup.retrofit2:converter-scalars:2.9.0") // Add this line
     // ---- OKHTTP LOGGING ----
     implementation("com.squareup.okhttp3:logging-interceptor:5.3.2")
-
     // ---- SECURITY (EncryptedSharedPreferences) ----
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.compose.material:material-icons-extended")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
