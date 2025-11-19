@@ -12,7 +12,12 @@ import kotlinx.coroutines.launch
 sealed class LoginState {
     object Idle : LoginState()
     object Loading : LoginState()
-    data class Success(val token: String, val username: String?, val cargo: String?, val id: Int?) : LoginState()
+    data class Success(
+        val token: String,
+        val username: String?,
+        val cargo: String?,
+        val id: Int?
+    ) : LoginState()
     data class Error(val msg: String) : LoginState()
 }
 
@@ -30,9 +35,16 @@ class LoginViewModel(private val context: Context) : ViewModel() {
             if (result.isSuccess) {
                 val token = result.getOrNull()!!
                 val payload = JwtUtils.decodePayload(token)
+
+                if (payload == null) {
+                    _state.value = LoginState.Error("Token inválido")
+                    return@launch
+                }
+
                 val username = payload.optString("sub", null)
                 val cargo = payload.optString("cargo", null)
-                val id = if (payload.has("id")) payload.optInt("id", -1).takeIf { it >= 0 } else null
+                val id = payload.optInt("id", -1).takeIf { it >= 0 }
+
                 _state.value = LoginState.Success(token, username, cargo, id)
             } else {
                 _state.value = LoginState.Error(result.exceptionOrNull()?.message ?: "Error desconocido")
@@ -43,5 +55,18 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     fun logout() {
         repo.logout()
         _state.value = LoginState.Idle
+    }
+
+    companion object {
+        fun Factory(context: android.content.Context) =
+            object : androidx.lifecycle.ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                    if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
+                        return LoginViewModel(context) as T
+                    }
+                    throw IllegalArgumentException("Unknown ViewModel class")
+                }
+            }
     }
 }

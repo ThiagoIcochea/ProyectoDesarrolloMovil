@@ -58,6 +58,7 @@ dependencies {
     // ---- SECURITY (EncryptedSharedPreferences) ----
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.navigation:navigation-compose:2.7.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
