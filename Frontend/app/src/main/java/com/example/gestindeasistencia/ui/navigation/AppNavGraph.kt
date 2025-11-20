@@ -64,7 +64,7 @@ fun AppNavGraph(
                 onReportes = { navController.navigate("reportes") },
                 onPerfil = { navController.navigate("perfil") },
                 onConfig = { navController.navigate("config") },
-
+                onAsistencia = { navController.navigate("asistencia/$username") },
                 onLogout = {
                     loginViewModel.logout()
                     navController.navigate("login") {
@@ -127,6 +127,31 @@ fun AppNavGraph(
                 onSaved = {
                     navController.navigate("personal") {
                         popUpTo("personal") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ---------------- ASISTENCIA ----------------
+        composable(
+            route = "asistencia/{username}",
+            arguments = listOf(
+                navArgument("username") { type = NavType.StringType }
+            )
+        ) { backStack ->
+            val username = backStack.arguments?.getString("username") ?: ""
+
+            EmpleadoAsistenciaScreen(
+                viewModel = asistenciaViewModel,
+                username = username,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onLogout = {
+                    // Al hacer logout desde asistencia, volver al login
+                    loginViewModel.logout()
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
