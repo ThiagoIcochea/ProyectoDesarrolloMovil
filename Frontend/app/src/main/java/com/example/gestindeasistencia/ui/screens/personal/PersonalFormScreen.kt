@@ -1,11 +1,15 @@
 package com.example.gestindeasistencia.ui.screens.personal
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.gestindeasistencia.data.models.CargoDto
 import com.example.gestindeasistencia.data.models.DocumentoDto
@@ -15,7 +19,7 @@ import com.example.gestindeasistencia.viewmodels.PersonalViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonalFormScreen(
-    idPersonal: Int?,                      // NULL = crear
+    idPersonal: Int?,
     viewModel: PersonalViewModel,
     onBack: () -> Unit,
     onSaved: () -> Unit
@@ -57,23 +61,31 @@ fun PersonalFormScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(if (idPersonal == null) "Nuevo Personal" else "Editar Personal") },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color(0xFF6750A4),
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
                     }
                 }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) { padding ->
 
         Column(
             modifier = Modifier
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(20.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp) // Espaciado consistente
         ) {
 
+            // Campos del formulario
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
@@ -123,13 +135,14 @@ fun PersonalFormScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
 
+            // Botón de Guardar/Actualizar
             Button(
                 onClick = {
                     val dto = PersonalDto(
                         idPersonal = idPersonal,
-                        cargo = detalle?.cargo ?: CargoDto(1, "Empleado de Planta","ACTIVO"), // OJO
+                        cargo = detalle?.cargo ?: CargoDto(1, "Empleado de Planta","ACTIVO"),
                         documento = detalle?.documento ?: DocumentoDto(1, "DNI"),
                         nombre = nombre,
                         apellPaterno = apellPaterno,
@@ -145,7 +158,8 @@ fun PersonalFormScreen(
                     else
                         viewModel.actualizar(idPersonal, dto)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)) // Color primario
             ) {
                 Text(if (idPersonal == null) "Guardar" else "Actualizar")
             }
