@@ -28,7 +28,7 @@ class PersonalRepository(context: Context) {
         try {
             val resp = api.obtenerPersonal(id)
             if (resp.isSuccessful) Result.success(resp.body()!!)
-            else Result.failure(Exception("Error al obtener personal"))
+            else Result.failure(Exception("Error ${resp.code()} al obtener personal"))
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -11,6 +11,7 @@ import com.example.gestindeasistencia.ui.screens.login.LoginScreen
 import com.example.gestindeasistencia.viewmodels.LoginViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.gestindeasistencia.ui.screens.personal.PersonalDetailScreen
 import com.example.gestindeasistencia.ui.screens.personal.PersonalListScreen
 import com.example.gestindeasistencia.viewmodels.PersonalViewModel
 
@@ -79,5 +80,25 @@ fun AppNavGraph(
                 onNew = { navController.navigate("personalNuevo") }
             )
         }
+        composable("personalDetalle/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.IntType })
+        ) { backStack ->
+
+            val id = backStack.arguments!!.getInt("id")
+            val vm: PersonalViewModel = viewModel(factory = PersonalViewModel.Factory(LocalContext.current))
+
+            PersonalDetailScreen(
+                idPersonal = id,
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onEdit = { navController.navigate("personalEditar/$id") },
+                onDeleted = {
+                    navController.navigate("personal") {
+                        popUpTo("personal") { inclusive = true }
+                    }
+                }
+            )
+        }
+
     }
 }

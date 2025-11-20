@@ -22,6 +22,13 @@ class PersonalViewModel(context: Context) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _detalle = MutableStateFlow<PersonalDto?>(null)
+    val detalle: StateFlow<PersonalDto?> = _detalle
+
+    private val _deleteSuccess = MutableStateFlow(false)
+    val deleteSuccess: StateFlow<Boolean> = _deleteSuccess
+
+
     fun cargarPersonal() {
         viewModelScope.launch {
             _loading.value = true
@@ -33,6 +40,27 @@ class PersonalViewModel(context: Context) : ViewModel() {
             } else {
                 _error.value = result.exceptionOrNull()?.message
             }
+        }
+    }
+
+    fun cargarDetalle(id: Int) {
+        viewModelScope.launch {
+            _loading.value = true
+            val result = repo.obtenerPersonal(id)
+            _loading.value = false
+
+            if (result.isSuccess) {
+                _detalle.value = result.getOrNull()
+            } else {
+                _error.value = "Error cargando detalle: ${result.exceptionOrNull()?.message}"
+            }
+        }
+    }
+
+    fun eliminar(id: Int) {
+        viewModelScope.launch {
+            val result = repo.eliminarPersonal(id)
+            _deleteSuccess.value = result.isSuccess
         }
     }
 
