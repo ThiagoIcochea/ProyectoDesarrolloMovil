@@ -59,6 +59,15 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.0")
+    
+    // ---- BIOMETRIC (Huella Digital) ----
+    implementation("androidx.biometric:biometric:1.1.0")
+    
+    // ---- LOCATION (Geolocalización) ----
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    
+    // ---- FRAGMENT (Para BiometricPrompt) ----
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

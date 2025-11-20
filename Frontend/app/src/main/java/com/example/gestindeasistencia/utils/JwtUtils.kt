@@ -23,4 +23,12 @@ object JwtUtils {
     fun getCargo(token: String): String {
         return decodePayload(token)?.optString("cargo", "") ?: ""
     }
+
+    fun extractId(token: String): Int? {
+        return try {
+            decodePayload(token)?.optInt("id")
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

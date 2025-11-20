@@ -9,6 +9,7 @@ package com.utp.model;
  *
  * @author Thiago
  */
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -26,8 +27,9 @@ public class Asistencia {
     @JoinColumn(name = "id_personal")
     private Personal personal;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_movimiento")
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private Movimiento movimiento;
 
     private String fecha;
@@ -39,4 +41,3 @@ public class Asistencia {
     @JoinColumn(name = "id_autorizacion")
     private Autorizacion autorizacion;
 }
-

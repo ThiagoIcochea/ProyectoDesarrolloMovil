@@ -45,8 +45,6 @@ public class PersonalController {
             return personalRepo.findAll();
         }
 
-       
-        System.out.println("IDUSUARIO:"+idUsuario);
         Usuario usuario = usuarioRepo.findAll().stream()
                 .filter(u -> u.getIdUsuario().equals(idUsuario))
                 .findFirst()
@@ -56,9 +54,7 @@ public class PersonalController {
             return List.of();
         }
 
-   
         Integer idPersonal = usuario.getPersonal().getIdPersonal();
-        System.out.println("IDPERSONAL:"+idPersonal);
         
         return personalRepo.findAll().stream()
                 .filter(per -> per.getIdPersonal().equals(idPersonal))

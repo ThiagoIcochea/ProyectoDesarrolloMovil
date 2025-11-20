@@ -1,15 +1,16 @@
 package com.example.gestindeasistencia
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
+import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.rememberNavController
 import com.example.gestindeasistencia.ui.navigation.AppNavGraph
+import com.example.gestindeasistencia.viewmodels.AsistenciaViewModel
 import com.example.gestindeasistencia.viewmodels.LoginViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private val loginViewModel: LoginViewModel by viewModels {
         LoginViewModel.Factory(applicationContext)
@@ -18,6 +19,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Crear AsistenciaViewModel
+        val asistenciaViewModel = AsistenciaViewModel(this)
+
         setContent {
             MaterialTheme {
 
@@ -25,7 +29,8 @@ class MainActivity : ComponentActivity() {
 
                 AppNavGraph(
                     navController = navController,
-                    loginViewModel = loginViewModel
+                    loginViewModel = loginViewModel,
+                    asistenciaViewModel = asistenciaViewModel
                 )
             }
         }

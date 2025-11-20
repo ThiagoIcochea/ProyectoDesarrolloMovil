@@ -29,6 +29,7 @@ fun DashboardScreen(
     onReportes: () -> Unit,
     onPerfil: () -> Unit,
     onConfig: () -> Unit,
+    onAsistencia: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     Scaffold(
@@ -101,7 +102,7 @@ fun DashboardScreen(
             DashboardCard(
                 title = "Registrar asistencia",
                 icon = Icons.Filled.AssignmentTurnedIn,
-                onClick = onPerfil
+                onClick = onAsistencia
             )
             DashboardCard(
                 title = "Reportes",

@@ -10,7 +10,7 @@ import retrofit2.converter.scalars.ScalarsConverterFactory
 
 object ApiClient {
 
-    private const val BASE_URL = "http://192.168.100.7:8080/api/"
+    private const val BASE_URL = "http://192.168.1.103:8080/api/"
 
     fun getClient(context: Context): ApiService {
         val tokenProvider = { com.example.gestindeasistencia.utils.SecurePrefs.getToken(context) }

@@ -40,8 +40,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String username = jwtService.extractUsername(token);
                 String cargo = jwtService.extractCargo(token).trim();
 
-                System.out.println("Cargo extraído para Spring Security: '" + cargo + "'");
-
                 List<SimpleGrantedAuthority> authorities =
                         List.of(new SimpleGrantedAuthority(cargo));
 
