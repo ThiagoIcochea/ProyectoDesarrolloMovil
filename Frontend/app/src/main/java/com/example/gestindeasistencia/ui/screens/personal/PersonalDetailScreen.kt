@@ -2,7 +2,9 @@ package com.example.gestindeasistencia.ui.screens.personal
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -11,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.gestindeasistencia.viewmodels.PersonalViewModel
 
@@ -39,20 +42,26 @@ fun PersonalDetailScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Detalle del Personal") },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color(0xFF6750A4),
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
                     }
                 }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) { padding ->
 
         if (loading) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
+            ) { CircularProgressIndicator(color = Color(0xFF6750A4)) }
             return@Scaffold
         }
 
@@ -61,21 +70,41 @@ fun PersonalDetailScreen(
                 modifier = Modifier
                     .padding(padding)
                     .padding(20.dp)
+                    .fillMaxSize()
             ) {
+                // Tarjeta Principal
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFEADDE8) // Color de Card del modelo
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(Modifier.padding(24.dp)) {
+                        Text(
+                            "${p.nombre} ${p.apellPaterno} ${p.apellMaterno}",
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFF6750A4)
+                        )
 
-                Text("${p.nombre} ${p.apellPaterno} ${p.apellMaterno}",
-                    style = MaterialTheme.typography.headlineSmall)
+                        Spacer(Modifier.height(16.dp))
 
-                Spacer(Modifier.height(10.dp))
+                        DetailItem(label = "Cargo", value = p.cargo?.descripcion)
+                        DetailItem(label = "Documento", value = "${p.documento?.descripcion} - ${p.nroDocumento}")
+                        DetailItem(label = "Fecha Ingreso", value = p.fechaIngreso ?: "—")
+                        DetailItem(label = "Fecha Nacimiento", value = p.fechaNacimiento ?: "—")
+                    }
+                }
 
-                Text("Cargo: ${p.cargo}")
-                Text("Documento: ${p.documento} - ${p.nroDocumento}")
-                Text("Email: ${p.email}")
-                Text("Fecha ingreso: ${p.fechaIngreso ?: "—"}")
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(32.dp))
 
-                Row {
+                // Botones de acción
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
                     Button(
                         onClick = { onEdit(p.idPersonal!!) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4))
@@ -84,8 +113,6 @@ fun PersonalDetailScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Editar")
                     }
-
-                    Spacer(Modifier.width(16.dp))
 
                     Button(
                         onClick = { viewModel.eliminar(p.idPersonal!!) },
@@ -98,5 +125,21 @@ fun PersonalDetailScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun DetailItem(label: String, value: String?) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value ?: "N/A",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
