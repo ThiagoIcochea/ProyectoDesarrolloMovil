@@ -15,7 +15,7 @@ object GeoConfig {
      * 2. Hacer clic derecho en la ubicación de la empresa
      * 3. Seleccionar las coordenadas que aparecen (primer item del menú)
      * 4. Pegar aquí
-     * 
+     * -12.021652585133255, -76.97859200294965
      * Formato: Latitud, Longitud
      */
     const val EMPRESA_LATITUD = -12.129880

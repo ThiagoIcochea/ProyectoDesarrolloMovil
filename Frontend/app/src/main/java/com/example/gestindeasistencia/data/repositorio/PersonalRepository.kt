@@ -37,7 +37,7 @@ class PersonalRepository(context: Context) {
         try {
             val resp = api.crearPersonal(dto)
             if (resp.isSuccessful) Result.success(resp.body()!!)
-            else Result.failure(Exception("Error al crear personal"))
+            else Result.failure(Exception("Error creando: ${resp.code()}"))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -46,7 +46,7 @@ class PersonalRepository(context: Context) {
         try {
             val resp = api.actualizarPersonal(id, dto)
             if (resp.isSuccessful) Result.success(resp.body()!!)
-            else Result.failure(Exception("Error al actualizar"))
+            else Result.failure(Exception("Error actualizando: ${resp.code()}"))
         } catch (e: Exception) {
             Result.failure(e)
         }

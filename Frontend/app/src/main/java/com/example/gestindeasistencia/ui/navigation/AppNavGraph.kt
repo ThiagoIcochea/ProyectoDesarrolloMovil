@@ -14,6 +14,7 @@ import com.example.gestindeasistencia.viewmodels.LoginViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.example.gestindeasistencia.ui.screens.personal.PersonalDetailScreen
+import com.example.gestindeasistencia.ui.screens.personal.PersonalFormScreen
 import com.example.gestindeasistencia.ui.screens.personal.PersonalListScreen
 import com.example.gestindeasistencia.viewmodels.PersonalViewModel
 
@@ -63,7 +64,6 @@ fun AppNavGraph(
                 onReportes = { navController.navigate("reportes") },
                 onPerfil = { navController.navigate("perfil") },
                 onConfig = { navController.navigate("config") },
-                onAsistencia = { navController.navigate("asistencia/$username") },
 
                 onLogout = {
                     loginViewModel.logout()
@@ -81,7 +81,7 @@ fun AppNavGraph(
             PersonalListScreen(
                 viewModel = vm,
                 onSelect = { id -> navController.navigate("personalDetalle/$id") },
-                onNew = { navController.navigate("personalNuevo") }
+                onNew = { navController.navigate("personalCrear") }
             )
         }
         composable("personalDetalle/{id}",
@@ -103,31 +103,34 @@ fun AppNavGraph(
                 }
             )
         }
-
-
-        // ---------------- ASISTENCIA ----------------
-        composable(
-            route = "asistencia/{username}",
-            arguments = listOf(
-                navArgument("username") { type = NavType.StringType }
-            )
-        ) { backStack ->
-            val username = backStack.arguments?.getString("username") ?: ""
-
-            EmpleadoAsistenciaScreen(
-                viewModel = asistenciaViewModel,
-                username = username,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onLogout = {
-                    // Al hacer logout desde asistencia, volver al login
-                    loginViewModel.logout()
-                    navController.navigate("login") {
-                        popUpTo(0) { inclusive = true }
+        composable("personalCrear") {
+            val vm: PersonalViewModel = viewModel(factory = PersonalViewModel.Factory(LocalContext.current))
+            PersonalFormScreen(
+                idPersonal = null,
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onSaved = {
+                    navController.navigate("personal") {
+                        popUpTo("personal") { inclusive = true }
                     }
                 }
             )
         }
+        composable("personalEditar/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { backStack ->
+            val id = backStack.arguments!!.getInt("id")
+            val vm: PersonalViewModel = viewModel(factory = PersonalViewModel.Factory(LocalContext.current))
+
+            PersonalFormScreen(
+                idPersonal = id,
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onSaved = {
+                    navController.navigate("personal") {
+                        popUpTo("personal") { inclusive = true }
+                    }
+                }
+            )
+        }
+
     }
 }
