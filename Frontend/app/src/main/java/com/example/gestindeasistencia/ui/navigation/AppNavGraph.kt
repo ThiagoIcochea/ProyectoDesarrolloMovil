@@ -28,8 +28,6 @@ fun AppNavGraph(
         navController = navController,
         startDestination = "login"
     ) {
-
-        // ---------------- LOGIN ----------------
         composable("login") {
             LoginScreen(
                 viewModel = loginViewModel,
@@ -41,8 +39,6 @@ fun AppNavGraph(
                 }
             )
         }
-
-        // ---------------- DASHBOARD ----------------
         composable(
             route = "dashboard/{username}/{cargo}/{id}",
             arguments = listOf(
@@ -51,15 +47,12 @@ fun AppNavGraph(
                 navArgument("id") { type = NavType.IntType }
             )
         ) { backStack ->
-
             val username = backStack.arguments?.getString("username") ?: ""
             val cargo = backStack.arguments?.getString("cargo") ?: ""
             val id = backStack.arguments?.getInt("id") ?: 0
-
             DashboardScreen(
                 userName = username,
                 userCargo = cargo,
-
                 onGestionPersonal = { navController.navigate("personal") },
                 onReportes = { navController.navigate("reportes") },
                 onPerfil = { navController.navigate("perfil") },
@@ -73,11 +66,8 @@ fun AppNavGraph(
                 }
             )
         }
-
-        // --- PERSONAL LIST ---
         composable("personal") {
             val vm: PersonalViewModel = viewModel(factory = PersonalViewModel.Factory(LocalContext.current))
-
             PersonalListScreen(
                 viewModel = vm,
                 onSelect = { id -> navController.navigate("personalDetalle/$id") },
@@ -87,10 +77,8 @@ fun AppNavGraph(
         composable("personalDetalle/{id}",
             arguments = listOf(navArgument("id") { type = NavType.IntType })
         ) { backStack ->
-
             val id = backStack.arguments!!.getInt("id")
             val vm: PersonalViewModel = viewModel(factory = PersonalViewModel.Factory(LocalContext.current))
-
             PersonalDetailScreen(
                 idPersonal = id,
                 viewModel = vm,
@@ -131,8 +119,6 @@ fun AppNavGraph(
                 }
             )
         }
-
-        // ---------------- ASISTENCIA ----------------
         composable(
             route = "asistencia/{username}",
             arguments = listOf(
@@ -148,7 +134,6 @@ fun AppNavGraph(
                     navController.popBackStack()
                 },
                 onLogout = {
-                    // Al hacer logout desde asistencia, volver al login
                     loginViewModel.logout()
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }

@@ -68,7 +68,7 @@ dependencies {
     
     // ---- FRAGMENT (Para BiometricPrompt) ----
     implementation("androidx.fragment:fragment-ktx:1.6.2")
-
+    implementation(libs.androidx.foundation)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

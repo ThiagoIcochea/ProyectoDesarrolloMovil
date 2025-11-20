@@ -27,8 +27,8 @@ object ApiClient {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)
-            .addConverterFactory(ScalarsConverterFactory.create()) // <-- acepta String
-            .addConverterFactory(GsonConverterFactory.create())    // <-- JSON
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ApiService::class.java)
 
