@@ -71,7 +71,8 @@ fun AppNavGraph(
             PersonalListScreen(
                 viewModel = vm,
                 onSelect = { id -> navController.navigate("personalDetalle/$id") },
-                onNew = { navController.navigate("personalCrear") }
+                onNew = { navController.navigate("personalCrear") },
+                onBack = { navController.popBackStack() }
             )
         }
         composable("personalDetalle/{id}",
