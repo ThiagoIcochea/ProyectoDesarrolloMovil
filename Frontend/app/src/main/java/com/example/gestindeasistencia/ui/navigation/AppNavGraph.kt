@@ -1,6 +1,8 @@
 package com.example.gestindeasistencia.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -9,6 +11,8 @@ import com.example.gestindeasistencia.ui.screens.login.LoginScreen
 import com.example.gestindeasistencia.viewmodels.LoginViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.gestindeasistencia.ui.screens.personal.PersonalListScreen
+import com.example.gestindeasistencia.viewmodels.PersonalViewModel
 
 @Composable
 fun AppNavGraph(
@@ -62,6 +66,17 @@ fun AppNavGraph(
                         popUpTo("dashboard") { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // --- PERSONAL LIST ---
+        composable("personal") {
+            val vm: PersonalViewModel = viewModel(factory = PersonalViewModel.Factory(LocalContext.current))
+
+            PersonalListScreen(
+                viewModel = vm,
+                onSelect = { id -> navController.navigate("personalDetalle/$id") },
+                onNew = { navController.navigate("personalNuevo") }
             )
         }
     }
