@@ -1,11 +1,13 @@
 package com.utp.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
 @Table(name = "movimiento")
 @Data
+@JsonInclude(JsonInclude.Include.ALWAYS)
 public class Movimiento {
 
     @Id

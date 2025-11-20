@@ -79,18 +79,10 @@ public class UsuarioService {
     Usuario u = repo.findByUsuario(usuario);
     
     if (u == null) {
-        System.out.println("⚠️ Usuario no encontrado: " + usuario);
         return false; 
     }
 
-    System.out.println("✅ Usuario encontrado: " + u.getUsuario());
-    System.out.println("🔐 Password en BD: " + u.getPassword());
-    System.out.println("🔑 Password ingresada: " + passwordIngresada);
-
-    boolean coincide = passwordEncoder.matches(passwordIngresada, u.getPassword());
-    System.out.println("🔍 Coincide? " + coincide);
-
-    return coincide;
+    return passwordEncoder.matches(passwordIngresada, u.getPassword());
 }
     
  
