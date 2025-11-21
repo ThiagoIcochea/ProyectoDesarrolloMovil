@@ -18,8 +18,8 @@ object GeoConfig {
      * -12.021652585133255, -76.97859200294965
      * Formato: Latitud, Longitud
      */
-    const val EMPRESA_LATITUD = -12.129880
-    const val EMPRESA_LONGITUD = -76.948594
+    const val EMPRESA_LATITUD = -12.054674
+    const val EMPRESA_LONGITUD = -77.025211
     
     /**
      * Radio permitido en metros

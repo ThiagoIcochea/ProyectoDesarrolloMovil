@@ -31,33 +31,45 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
+        String path = request.getServletPath();
+
+        // 🚫 1. NO aplicar el filtro al login y registro
+        if (path.equals("/api/auth/login")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+        // 🚫 2. Si NO hay token, continuar sin autenticar (no bloquear)
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-            if (jwtService.validateToken(token)) {
-                String username = jwtService.extractUsername(token);
-                String cargo = jwtService.extractCargo(token).trim();
+        String token = authHeader.substring(7);
 
-                List<SimpleGrantedAuthority> authorities =
-                        List.of(new SimpleGrantedAuthority(cargo));
+        // ✔ 3. Validar token
+        if (jwtService.validateToken(token)) {
+            String username = jwtService.extractUsername(token);
+            String cargo = jwtService.extractCargo(token).trim();
 
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(
-                                username,
-                                null,
-                                authorities
-                        );
+            List<SimpleGrantedAuthority> authorities =
+                    List.of(new SimpleGrantedAuthority(cargo));
 
-             
-                auth.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(
+                            username,
+                            null,
+                            authorities
+                    );
 
-             
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            }
+            auth.setDetails(
+                    new WebAuthenticationDetailsSource().buildDetails(request)
+            );
+
+            // ✔ 4. Registrar autenticación en el contexto
+            SecurityContextHolder.getContext().setAuthentication(auth);
         }
 
         filterChain.doFilter(request, response);
