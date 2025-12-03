@@ -17,6 +17,7 @@ import com.example.gestindeasistencia.ui.screens.personal.PersonalDetailScreen
 import com.example.gestindeasistencia.ui.screens.personal.PersonalFormScreen
 import com.example.gestindeasistencia.ui.screens.personal.PersonalListScreen
 import com.example.gestindeasistencia.viewmodels.PersonalViewModel
+import com.example.gestindeasistencia.ui.screens.report.ReportScreen
 
 @Composable
 fun AppNavGraph(
@@ -28,6 +29,12 @@ fun AppNavGraph(
         navController = navController,
         startDestination = "login"
     ) {
+        composable("reportes") {
+            ReportScreen(
+                viewModel = asistenciaViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
         composable("login") {
             LoginScreen(
                 viewModel = loginViewModel,
