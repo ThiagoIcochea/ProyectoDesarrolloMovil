@@ -33,15 +33,23 @@ import java.io.BufferedWriter
 import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 data class ReportRow(
 	val nombre: String,
 	val documento: String?,
 	val totalAsistencias: Int,
+	val totalMarcas: Int,
+	val diasTrabajados: Int,
 	val demoras: Int,
 	val faltas: Int,
 	val descuentoPercent: Double,
+	val totalEntries: Int,
+	val totalExits: Int,
+	val missingEntries: Int,
+	val missingExits: Int,
+	val diasFaltantes: List<String>,
 	val ultimaFecha: String?
 )
 
@@ -71,7 +79,25 @@ fun ReportScreen(viewModel: AsistenciaViewModel, onBack: () -> Unit) {
 	var fechaError by remember { mutableStateOf<String?>(null) }
 
 	val asistenciasFiltradas = remember(asistencias, filtroNombre, fechaDesde, fechaHasta) {
-		filtrarAsistencias(asistencias, filtroNombre, fechaDesde, fechaHasta)
+		var resultado = asistencias
+		// primero filtrar por fecha
+		if (fechaDesde.isNotBlank() || fechaHasta.isNotBlank()) {
+			fun extraerFechaIso(fechaHora: String?): String? = fechaHora?.takeIf { it.isNotBlank() }?.take(10)
+			resultado = resultado.filter { a ->
+				val fecha = extraerFechaIso(a.fecha)
+				val matchDesde = fechaDesde.isBlank() || (fecha != null && fecha >= fechaDesde)
+				val matchHasta = fechaHasta.isBlank() || (fecha != null && fecha <= fechaHasta)
+				matchDesde && matchHasta
+			}
+		}
+		// luego filtrar por nombre (ocultar quiénes no coincidan)
+		if (filtroNombre.isNotBlank()) {
+			resultado = resultado.filter { a ->
+				val nombreCompleto = listOfNotNull(a.personal?.nombre, a.personal?.apellPaterno, a.personal?.apellMaterno).joinToString(" ").lowercase()
+				nombreCompleto.contains(filtroNombre.lowercase())
+			}
+		}
+		resultado
 	}
 
 	val periodoInicio = if (fechaDesde.isNotBlank()) fechaDesde else "2025-10-01"
@@ -133,19 +159,21 @@ fun ReportScreen(viewModel: AsistenciaViewModel, onBack: () -> Unit) {
 
 			item {
 				if (summaries.isNotEmpty()) {
-					val totalAsistenciasGlobal = summaries.sumOf { it.totalAsistencias }
-					val totalDemorasGlobal = summaries.sumOf { it.demoras }
-					val totalFaltasGlobal = summaries.sumOf { it.faltas }
-					val descuentoPromedio = summaries.map { it.descuentoPercent }.average()
+					val totalMarcasGlobal = summaries.sumOf { it.totalMarcas }
+					val totalDiasGlobal = summaries.sumOf { it.diasTrabajados }
+					val totalEntriesGlobal = summaries.sumOf { it.totalEntries }
+					val totalExitsGlobal = summaries.sumOf { it.totalExits }
+					val totalMissingEntriesGlobal = summaries.sumOf { it.missingEntries }
+					val totalMissingExitsGlobal = summaries.sumOf { it.missingExits }
 					Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E5F5))) {
 						Column(modifier = Modifier.padding(16.dp)) {
 							Text("Resumen Global", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = Color(0xFF6750A4))
 							Spacer(modifier = Modifier.height(12.dp))
 							Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-								StatCard(label = "Asistencias", valor = totalAsistenciasGlobal.toString(), bgColor = Color(0xFFE8F5E9), textColor = Color(0xFF2E7D32), modifier = Modifier.weight(1f))
-								StatCard(label = "Demoras", valor = totalDemorasGlobal.toString(), bgColor = Color(0xFFFFF3E0), textColor = Color(0xFFE65100), modifier = Modifier.weight(1f))
-								StatCard(label = "Faltas", valor = totalFaltasGlobal.toString(), bgColor = Color(0xFFFFEBEE), textColor = Color(0xFFC62828), modifier = Modifier.weight(1f))
-								StatCard(label = "Desc. Prom.", valor = "${"%.1f".format(descuentoPromedio)}%", bgColor = Color(0xFFE0F2F1), textColor = Color(0xFF00695C), modifier = Modifier.weight(1f))
+								StatCard(label = "Entradas", valor = totalEntriesGlobal.toString(), bgColor = Color(0xFFE8F5E9), textColor = Color(0xFF2E7D32), modifier = Modifier.weight(1f))
+								StatCard(label = "Salidas", valor = totalExitsGlobal.toString(), bgColor = Color(0xFFFFF3E0), textColor = Color(0xFFE65100), modifier = Modifier.weight(1f))
+								StatCard(label = "Faltó Entrada", valor = totalMissingEntriesGlobal.toString(), bgColor = Color(0xFFFFEBEE), textColor = Color(0xFFC62828), modifier = Modifier.weight(1f))
+								StatCard(label = "Faltó Salida", valor = totalMissingExitsGlobal.toString(), bgColor = Color(0xFFE0F2F1), textColor = Color(0xFF00695C), modifier = Modifier.weight(1f))
 							}
 						}
 					}
@@ -171,12 +199,16 @@ fun ReportScreen(viewModel: AsistenciaViewModel, onBack: () -> Unit) {
 						if (!s.documento.isNullOrBlank()) Text("Doc: ${s.documento}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 						Spacer(modifier = Modifier.height(10.dp))
 						Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-							StatIndicator(label = "Asistencias", valor = s.totalAsistencias.toString(), color = Color(0xFF2E7D32), modifier = Modifier.weight(1f))
-							StatIndicator(label = "Demoras", valor = s.demoras.toString(), color = Color(0xFFE65100), modifier = Modifier.weight(1f))
-							StatIndicator(label = "Faltas", valor = s.faltas.toString(), color = Color(0xFFC62828), modifier = Modifier.weight(1f))
-							StatIndicator(label = "Descuento", valor = "${"%.1f".format(s.descuentoPercent)}%", color = Color(0xFF00695C), modifier = Modifier.weight(1f))
+							StatIndicator(label = "Entradas", valor = s.totalEntries.toString(), color = Color(0xFF2E7D32), modifier = Modifier.weight(1f))
+							StatIndicator(label = "Salidas", valor = s.totalExits.toString(), color = Color(0xFF2E7D32), modifier = Modifier.weight(1f))
+							StatIndicator(label = "Faltó Entr.", valor = s.missingEntries.toString(), color = Color(0xFFC62828), modifier = Modifier.weight(1f))
+							StatIndicator(label = "Faltó Sal.", valor = s.missingExits.toString(), color = Color(0xFFC62828), modifier = Modifier.weight(1f))
 						}
-						if (!s.ultimaFecha.isNullOrBlank()) { Spacer(modifier = Modifier.height(8.dp)); Text("Última marca: ${s.ultimaFecha}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+					if (s.diasFaltantes.isNotEmpty()) {
+						Spacer(modifier = Modifier.height(8.dp))
+						Text("Días con faltantes: ${s.diasFaltantes.size}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+					}
+							if (!s.ultimaFecha.isNullOrBlank()) { Spacer(modifier = Modifier.height(8.dp)); Text("Última marca: ${s.ultimaFecha}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 					}
 				}
 			}
@@ -216,150 +248,178 @@ fun StatIndicator(label: String, valor: String, color: Color, modifier: Modifier
 }
 
 fun calcularResumen(asistencias: List<com.example.gestindeasistencia.data.models.AsistenciaDto>, periodoInicio: String, periodoFin: String, usuarios: List<UsuarioDto>): List<ReportRow> {
+	// Nueva implementación más robusta y explícita
 	val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-	val inicioDate = try { sdfDate.parse(periodoInicio) } catch (e: Exception) { null }
-	val finDate = try { sdfDate.parse(periodoFin) } catch (e: Exception) { null }
-
-	// asegurar que el fin no supere la fecha actual (usar hoy como tope)
-	val todayCal = Calendar.getInstance()
-	todayCal.set(Calendar.HOUR_OF_DAY, 0); todayCal.set(Calendar.MINUTE, 0); todayCal.set(Calendar.SECOND, 0); todayCal.set(Calendar.MILLISECOND, 0)
-	val todayDate = todayCal.time
-	val finDateEffective = when {
-		finDate == null -> todayDate
-		finDate.after(todayDate) -> todayDate
-		else -> finDate
-	}
-
-	fun workingDatesBetween(start: java.util.Date?, end: java.util.Date?): List<java.util.Date> {
-		if (start == null || end == null) return emptyList()
-		val cal = Calendar.getInstance()
-		cal.time = start
-		val result = mutableListOf<java.util.Date>()
-		while (!cal.time.after(end)) {
-			val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
-			if (dayOfWeek != Calendar.SATURDAY && dayOfWeek != Calendar.SUNDAY) {
-				result.add(cal.time)
-			}
-			cal.add(Calendar.DATE, 1)
-		}
-		return result
-	}
-
-	// helper to parse various datetime formats
-	fun parseDateFlexible(fechaHora: String?): java.util.Date? {
+	// parseo flexible de fecha/hora
+	fun parseDateFlexible(fechaHora: String?): Date? {
 		if (fechaHora.isNullOrBlank()) return null
 		val patterns = listOf("yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd")
 		for (p in patterns) {
 			try {
 				return SimpleDateFormat(p, Locale.getDefault()).parse(fechaHora)
-			} catch (_: Exception) { /* try next */ }
+			} catch (_: Exception) { }
 		}
 		return null
 	}
 
-	// Build a map of personalId -> personal: include ALL usuarios (so admin can see everyone)
-	// plus any personal referenced in asistencias not present in usuarios
+	// convierte a fecha sin hora
+	fun dateOnly(d: Date): Date {
+		val c = Calendar.getInstance(); c.time = d
+		c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)
+		return c.time
+	}
+
+	// convierte yyyy-MM-dd string a Date start of day
+	val inicioGlobal = try { sdfDate.parse(periodoInicio) } catch (_: Exception) { null }
+	val finGlobalRaw = try { sdfDate.parse(periodoFin) } catch (_: Exception) { null }
+
+	val today = dateOnly(Date())
+	val finGlobal = when {
+		finGlobalRaw == null -> today
+		finGlobalRaw.after(today) -> today
+		else -> finGlobalRaw
+	}
+
+	fun workingDaysBetween(start: Date?, end: Date?): List<Date> {
+		if (start == null || end == null) return emptyList()
+		val res = mutableListOf<Date>()
+		val c = Calendar.getInstance(); c.time = dateOnly(start)
+		val endOnly = dateOnly(end)
+		while (!c.time.after(endOnly)) {
+			val dow = c.get(Calendar.DAY_OF_WEEK)
+			if (dow != Calendar.SATURDAY && dow != Calendar.SUNDAY) res.add(c.time)
+			c.add(Calendar.DATE, 1)
+		}
+		return res
+	}
+
+	// construir mapa de personal SOLO con quiénes aparezcan en asistencias filtradas
 	val personalMap = mutableMapOf<Int, com.example.gestindeasistencia.data.models.PersonalDto>()
-	usuarios.forEach { u ->
-		val pid = u.personal?.idPersonal
-		val p = u.personal
-		if (pid != null && p != null) personalMap[pid] = p
-	}
-	// ensure we also include personals that appear only in asistencias
-	asistencias.forEach { a ->
-		val pid = a.personal?.idPersonal
-		val p = a.personal
-		if (pid != null && p != null) personalMap.putIfAbsent(pid, p)
-	}
+	asistencias.forEach { a -> a.personal?.idPersonal?.let { id -> a.personal?.let { p -> personalMap[id] = p } } }
 
 	val limiteTardanzaMinutes = 8 * 60 + 15
-
 	val results = mutableListOf<ReportRow>()
 
+	// procesar cada personal que tenga registros en asistencias filtradas
 	for ((idPersonal, personal) in personalMap) {
-		// registros del personal dentro del conjunto filtrado
-		val registrosPersonal = asistencias.filter { it.personal?.idPersonal == idPersonal }
+		val registros = asistencias.filter { it.personal?.idPersonal == idPersonal }
 
-		// agrupar registros por fecha (yyyy-MM-dd)
-		val registrosPorFecha = registrosPersonal.groupBy { it.fecha?.take(10) ?: "" }
-
-		// determinar inicio efectivo: fechaCreacion + 1 día si existe
-		val usuarioRelacionado = usuarios.firstOrNull { u -> u.personal?.idPersonal != null && u.personal?.idPersonal == idPersonal }
-		val inicioEfectivoDate = usuarioRelacionado?.fechaCreacion?.let { dstr ->
-			parseDateFlexible(dstr)?.let { d ->
-				val c = Calendar.getInstance(); c.time = d; c.add(Calendar.DATE, 1); c.time
-			}
+		// fecha de inicio por usuario: fechaCreacion + 1 si existe, sino inicioGlobal
+		val usuario = usuarios.firstOrNull { it.personal?.idPersonal == idPersonal }
+		val inicioUsuarioDate = usuario?.fechaCreacion?.let { s -> parseDateFlexible(s)?.let { d ->
+			val c = Calendar.getInstance(); c.time = d; c.add(Calendar.DATE, 1); dateOnly(c.time)
+		} }
+		val inicioFinal = when {
+			inicioGlobal == null && inicioUsuarioDate == null -> null
+			inicioGlobal == null -> inicioUsuarioDate
+			inicioUsuarioDate == null -> dateOnly(inicioGlobal)
+			else -> if (inicioUsuarioDate.after(inicioGlobal)) inicioUsuarioDate else dateOnly(inicioGlobal)
 		}
 
-		// determinar fecha inicio final como max(inicioDate, inicioEfectivoDate)
-		val startDate = when {
-			inicioDate == null && inicioEfectivoDate == null -> null
-			inicioDate == null -> inicioEfectivoDate
-			inicioEfectivoDate == null -> inicioDate
-			else -> if (inicioEfectivoDate.after(inicioDate)) inicioEfectivoDate else inicioDate
-		}
+		// tope por usuario: min(finGlobal, today, ultimaMarca)
+		val ultimaMarcaDate = registros.mapNotNull { parseDateFlexible(it.fecha) }.maxByOrNull { it.time }
+		val ultimaMarcaOnly = ultimaMarcaDate?.let { dateOnly(it) }
+		val finUsuario = listOfNotNull(finGlobal, today, ultimaMarcaOnly).minOrNull()
 
-		// determinar fecha final por usuario: no contar faltas después de la última marca del usuario
-		val ultimaMarcaStr = registrosPersonal.maxByOrNull { it.fecha ?: "" }?.fecha
-		val ultimaMarcaDate = try { parseDateFlexible(ultimaMarcaStr) } catch (e: Exception) { null }
-		val ultimaMarcaDateOnly = ultimaMarcaDate?.let {
-			val c = Calendar.getInstance(); c.time = it; c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0); c.time
-		}
-		val finDateUser = when {
-			ultimaMarcaDateOnly != null && finDateEffective != null && ultimaMarcaDateOnly.before(finDateEffective) -> ultimaMarcaDateOnly
-			else -> finDateEffective
-		}
+		// dias laborales para el usuario en el rango
+		val diasLaborales = workingDaysBetween(inicioFinal, finUsuario)
+		val diasLaboralesSet = diasLaborales.map { sdfDate.format(it) }.toSet()
 
-		val diasLaborales = workingDatesBetween(startDate, finDateUser)
-		val diasLaboralesStr = diasLaborales.map { sdfDate.format(it) }.toSet()
+		// fechas con cualquier marca del usuario
+		val fechasConMarca = registros.mapNotNull { it.fecha?.take(10) }.toSet()
 
-		// calcular dias con marca como conjunto único de fechas que intersectan diasLaborales
-		val fechasConMarca = registrosPersonal.mapNotNull { it.fecha?.take(10) }.toSet()
-		val diasPresentes = fechasConMarca.intersect(diasLaboralesStr)
+		// considerar solo las marcas que caen dentro de diasLaborales
+		val diasPresentes = fechasConMarca.intersect(diasLaboralesSet)
 
+		// contar demoras: por cada dia presente, tomar la primera marca de entrada (o la primera en general)
 		var demoras = 0
-
-		// para cada día presente, calcular si la marca de entrada fue tardía
-		for (diaStr in diasPresentes) {
-			val marcas = registrosPorFecha[diaStr] ?: continue
-			val entryMarcas = marcas.filter { r ->
+		val registrosPorFecha = registros.groupBy { it.fecha?.take(10) ?: "" }
+		for (dia in diasPresentes) {
+			val marcasDelDia = registrosPorFecha[dia] ?: continue
+			val entradas = marcasDelDia.filter { r ->
 				val desc = r.movimiento?.descripcion?.lowercase() ?: ""
 				val cod = r.movimiento?.abreDesc ?: ""
 				desc.contains("entrada") || desc.contains("ingreso") || cod.equals("ENT", true)
 			}
-			val marca = entryMarcas.minByOrNull { it.fecha ?: "" } ?: marcas.minByOrNull { it.fecha ?: "" }
-			val minutos = marca?.fecha?.let { fh ->
-				parseDateFlexible(fh)?.let { t -> val c = Calendar.getInstance(); c.time = t; c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE) }
-			}
+			val marcaEntrada = entradas.minByOrNull { it.fecha ?: "" } ?: marcasDelDia.minByOrNull { it.fecha ?: "" }
+			val minutos = marcaEntrada?.fecha?.let { fh -> parseDateFlexible(fh)?.let { dt ->
+				val c = Calendar.getInstance(); c.time = dt; c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE)
+			} }
 			if (minutos != null && minutos > limiteTardanzaMinutes) demoras += 1
 		}
 
-		val totalAsistencias = diasPresentes.size
-		val faltas = diasLaboralesStr.size - totalAsistencias
+		val totalMarcas = registros.size
+		val diasTrabajados = diasPresentes.size
+		val faltas = maxOf(0, diasLaboralesSet.size - diasTrabajados)
+		val descuento = faltas * 5.0 + demoras * 2.0
 
-		val descuentoPercent = faltas * 5.0 + demoras * 2.0
+		// contar tipos de marcas en el conjunto de registros
+		val isEntry: (com.example.gestindeasistencia.data.models.AsistenciaDto) -> Boolean = { r ->
+			val desc = r.movimiento?.descripcion?.lowercase() ?: ""
+			val cod = r.movimiento?.abreDesc ?: ""
+			desc.contains("entrada") || desc.contains("ingreso") || cod.equals("ENT", true)
+		}
+		val isExit: (com.example.gestindeasistencia.data.models.AsistenciaDto) -> Boolean = { r ->
+			val desc = r.movimiento?.descripcion?.lowercase() ?: ""
+			val cod = r.movimiento?.abreDesc ?: ""
+			desc.contains("salida") || cod.equals("SAL", true)
+		}
+		val isStartBreak: (com.example.gestindeasistencia.data.models.AsistenciaDto) -> Boolean = { r ->
+			val desc = r.movimiento?.descripcion?.lowercase() ?: ""
+			val cod = r.movimiento?.abreDesc ?: ""
+			desc.contains("break") && (desc.contains("inicio") || cod.equals("EBR", true))
+		}
+		val isEndBreak: (com.example.gestindeasistencia.data.models.AsistenciaDto) -> Boolean = { r ->
+			val desc = r.movimiento?.descripcion?.lowercase() ?: ""
+			val cod = r.movimiento?.abreDesc ?: ""
+			desc.contains("break") && (desc.contains("fin") || desc.contains("fin") || cod.equals("FBR", true))
+		}
+
+		val totalEntries = registros.count { isEntry(it) }
+		val totalExits = registros.count { isExit(it) }
+
+		// por día, verificar faltantes (solo entradas y salidas)
+		var missingEntries = 0
+		var missingExits = 0
+		val diasFaltantesList = mutableListOf<String>()
+		for (d in diasLaboralesSet) {
+			val marcasDelDia = registrosPorFecha[d] ?: emptyList()
+			val hasEntry = marcasDelDia.any { isEntry(it) }
+			val hasExit = marcasDelDia.any { isExit(it) }
+			if (!hasEntry) missingEntries += 1
+			if (!hasExit) missingExits += 1
+			if (!hasEntry || !hasExit) diasFaltantesList.add(d)
+		}
+
 		val nombre = listOfNotNull(personal.nombre, personal.apellPaterno, personal.apellMaterno).joinToString(" ").ifBlank { "Sin nombre" }
 		val documento = personal.nroDocumento
-		val ultimaFecha = registrosPersonal.maxByOrNull { it.fecha ?: "" }?.fecha
+		val ultimaFecha = registros.mapNotNull { it.fecha }.maxOrNull()
 
-		results.add(ReportRow(nombre = nombre, documento = documento, totalAsistencias = totalAsistencias, demoras = demoras, faltas = faltas, descuentoPercent = descuentoPercent, ultimaFecha = ultimaFecha))
+		results.add(ReportRow(
+			nombre = nombre,
+			documento = documento,
+			totalAsistencias = diasTrabajados,
+			totalMarcas = totalMarcas,
+			diasTrabajados = diasTrabajados,
+			demoras = demoras,
+			faltas = faltas,
+			descuentoPercent = descuento,
+			totalEntries = totalEntries,
+			totalExits = totalExits,
+			missingEntries = missingEntries,
+			missingExits = missingExits,
+			diasFaltantes = diasFaltantesList,
+			ultimaFecha = ultimaFecha
+		))
 	}
 
 	return results.sortedBy { it.nombre }
 }
 
-fun filtrarAsistencias(asistencias: List<com.example.gestindeasistencia.data.models.AsistenciaDto>, filtroNombre: String, fechaDesde: String, fechaHasta: String): List<com.example.gestindeasistencia.data.models.AsistenciaDto> {
-	fun extraerFechaIso(fechaHora: String?): String? = fechaHora?.takeIf { it.isNotBlank() }?.take(10)
-	return asistencias.filter { a ->
-		val personal = a.personal
-		val nombreCompleto = listOfNotNull(personal?.nombre, personal?.apellPaterno, personal?.apellMaterno).joinToString(" ").lowercase()
-		val matchNombre = filtroNombre.isBlank() || nombreCompleto.contains(filtroNombre.lowercase())
-		val fecha = extraerFechaIso(a.fecha)
-		val matchDesde = fechaDesde.isBlank() || (fecha != null && fecha >= fechaDesde)
-		val matchHasta = fechaHasta.isBlank() || (fecha != null && fecha <= fechaHasta)
-		matchNombre && matchDesde && matchHasta
-	}
+fun filtrarAsistencias(asistencias: List<com.example.gestindeasistencia.data.models.AsistenciaDto>): List<com.example.gestindeasistencia.data.models.AsistenciaDto> {
+	// Esta función ya no se usa; la lógica está en ReportScreen. Mantenerla para compatibilidad.
+	return asistencias
 }
 
 fun mostrarSelectorFecha(context: Context, onFechaSeleccionada: (String) -> Unit) {
@@ -387,7 +447,7 @@ suspend fun exportToCsv(context: Context, filename: String, rows: List<ReportRow
 	val contentValues = ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, displayName); put(MediaStore.MediaColumns.MIME_TYPE, mime); if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) put(MediaStore.Downloads.IS_PENDING, 1) }
 	val collection: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY) else MediaStore.Files.getContentUri("external")
 	val uri = resolver.insert(collection, contentValues) ?: return null
-	resolver.openOutputStream(uri)?.use { outputStream -> BufferedWriter(OutputStreamWriter(outputStream, Charsets.UTF_8)).use { bw -> bw.write("Nombre,Documento,Asistencias,Demoras,Faltas,DescuentoPercent,UltimaMarca\n"); rows.forEach { r -> bw.write("${r.nombre},${r.documento ?: ""},${r.totalAsistencias},${r.demoras},${r.faltas},${"%.1f".format(r.descuentoPercent)},${r.ultimaFecha ?: ""}\n") }; bw.flush() } }
+	resolver.openOutputStream(uri)?.use { outputStream -> BufferedWriter(OutputStreamWriter(outputStream, Charsets.UTF_8)).use { bw -> bw.write("Nombre,Documento,Entradas,Salidas,Faltó_Entrada,Faltó_Salida,Cant_Días_Faltantes,Detalle_Días_Faltantes\n"); rows.forEach { r -> bw.write("${r.nombre},${r.documento ?: ""},${r.totalEntries},${r.totalExits},${r.missingEntries},${r.missingExits},${r.diasFaltantes.size},\"${r.diasFaltantes.joinToString(";")}\"\n") }; bw.flush() } }
 	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { contentValues.clear(); contentValues.put(MediaStore.Downloads.IS_PENDING, 0); resolver.update(uri, contentValues, null, null) }
 	return uri
 }

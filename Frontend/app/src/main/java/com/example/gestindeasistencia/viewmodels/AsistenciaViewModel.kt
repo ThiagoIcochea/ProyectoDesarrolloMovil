@@ -10,6 +10,7 @@ import com.example.gestindeasistencia.data.remote.ApiClient
 import com.example.gestindeasistencia.utils.JwtUtils
 import com.example.gestindeasistencia.utils.SecurePrefs
 import kotlinx.coroutines.launch
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -24,6 +25,8 @@ class AsistenciaViewModel(private val context: Context) : ViewModel() {
     var successMessage = mutableStateOf<String?>(null)
     var movimientos = mutableStateOf<List<MovimientoDto>>(emptyList())
     var asistencias = mutableStateOf<List<AsistenciaDto>>(emptyList())
+    // Preview de los primeros registros recibidos (útil para debugging / volcado)
+    var asistenciasPreview = mutableStateOf<List<AsistenciaDto>>(emptyList())
 
     /**
      * Carga los movimientos disponibles del backend
@@ -79,7 +82,24 @@ class AsistenciaViewModel(private val context: Context) : ViewModel() {
             try {
                 val response = repository.listarAsistencias()
                 if (response.isSuccessful && response.body() != null) {
-                    asistencias.value = response.body()!!
+                    val body = response.body()!!
+                    asistencias.value = body
+
+                    // Guardar y loguear los primeros 50 registros para inspección
+                    val preview = if (body.size > 50) body.subList(0, 50) else body
+                    asistenciasPreview.value = preview
+                    try {
+                        Log.i("AsistenciaVM", "--- Dump primeros ${preview.size} registros de asistencias ---")
+                        preview.forEachIndexed { idx, a ->
+                            val pid = a.personal?.idPersonal ?: -1
+                            val fecha = a.fecha ?: "<sin_fecha>"
+                            val movCod = a.movimiento?.abreDesc ?: a.movimiento?.descripcion ?: "<sin_mov>"
+                            Log.i("AsistenciaVM", "#${idx + 1}: personalId=$pid, fecha=$fecha, movimiento=$movCod")
+                        }
+                        Log.i("AsistenciaVM", "--- Fin dump asistencias ---")
+                    } catch (e: Exception) {
+                        Log.e("AsistenciaVM", "Error logueando preview de asistencias: ${e.message}")
+                    }
                 }
             } catch (e: Exception) {
                 // Silenciosamente ignorar errores en la carga
