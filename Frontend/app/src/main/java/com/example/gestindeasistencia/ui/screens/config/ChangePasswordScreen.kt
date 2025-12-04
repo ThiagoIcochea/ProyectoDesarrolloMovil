@@ -57,21 +57,17 @@ fun ChangePasswordScreen(
     val isBiometricAvailable = remember { biometricHelper.isBiometricAvailable() }
     val isEmulator = remember { DeviceHelper.isEmulator() }
     
-    // Obtener datos del token
     val token = remember { SecurePrefs.getToken(context) }
     val userId = remember { token?.let { JwtUtils.extractId(it) } }
     val username = remember { token?.let { JwtUtils.getUserName(it) } }
     
-    // API Service
     val apiService = remember { ApiClient.getClient(context) }
     
-    // Validaciones
     val isCurrentPasswordValid = currentPassword.length >= 6
     val isNewPasswordValid = newPassword.length >= 6
     val doPasswordsMatch = newPassword == confirmPassword && confirmPassword.isNotEmpty()
     val isFormValid = isCurrentPasswordValid && isNewPasswordValid && doPasswordsMatch
 
-    // Función para cambiar contraseña
     fun cambiarPassword() {
         if (userId == null || username == null) {
             errorMessage = "Error: No se pudo obtener información del usuario"
@@ -83,7 +79,6 @@ fun ChangePasswordScreen(
         
         scope.launch {
             try {
-                // Paso 1: Validar contraseña actual haciendo login
                 val loginResponse = apiService.login(LoginRequest(username, currentPassword))
                 
                 if (!loginResponse.isSuccessful) {
@@ -92,7 +87,6 @@ fun ChangePasswordScreen(
                     return@launch
                 }
                 
-                // Paso 2: Actualizar con la nueva contraseña
                 val usuarioActualizado = UsuarioDto(
                     idUsuario = userId,
                     rol = null,
@@ -158,7 +152,6 @@ fun ChangePasswordScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Icono de seguridad
             Card(
                 modifier = Modifier.padding(vertical = 24.dp),
                 shape = RoundedCornerShape(50),
@@ -190,7 +183,6 @@ fun ChangePasswordScreen(
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            // Campo: Contraseña actual
             OutlinedTextField(
                 value = currentPassword,
                 onValueChange = { 
@@ -225,7 +217,6 @@ fun ChangePasswordScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo: Nueva contraseña
             OutlinedTextField(
                 value = newPassword,
                 onValueChange = { 
@@ -260,7 +251,6 @@ fun ChangePasswordScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo: Confirmar contraseña
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { 
@@ -293,7 +283,6 @@ fun ChangePasswordScreen(
                 } else null
             )
 
-            // Mensaje de error
             errorMessage?.let { error ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
@@ -321,7 +310,6 @@ fun ChangePasswordScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Indicador de requisitos
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
@@ -348,22 +336,18 @@ fun ChangePasswordScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Botón de cambiar contraseña
             Button(
                 onClick = {
-                    // Si es emulador en DEBUG, no pedir huella
                     if (isEmulator && BuildConfig.DEBUG) {
                         cambiarPassword()
                         return@Button
                     }
                     
-                    // Si no hay biometría disponible, bloquear
                     if (!isBiometricAvailable) {
                         errorMessage = "⚠️ HUELLA OBLIGATORIA\n\nNo se puede verificar la huella. No puedes cambiar la contraseña."
                         return@Button
                     }
                     
-                    // Pedir huella antes de cambiar contraseña
                     if (context is FragmentActivity) {
                         biometricHelper.authenticate(
                             activity = context,
@@ -412,7 +396,6 @@ fun ChangePasswordScreen(
                 }
             }
 
-            // Nota de seguridad
             if (isBiometricAvailable && !(isEmulator && BuildConfig.DEBUG)) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
@@ -453,7 +436,6 @@ fun ChangePasswordScreen(
                 }
             }
             
-            // Info del usuario actual
             Spacer(modifier = Modifier.height(24.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),

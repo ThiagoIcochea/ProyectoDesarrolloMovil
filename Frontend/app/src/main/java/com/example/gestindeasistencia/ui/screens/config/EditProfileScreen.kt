@@ -51,7 +51,6 @@ fun EditProfileScreen(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     
-    // Estados
     var nombre by remember { 
         mutableStateOf(SettingsPrefs.getCustomName(context) ?: userName) 
     }
@@ -68,19 +67,16 @@ fun EditProfileScreen(
     var showImageOptions by remember { mutableStateOf(false) }
     var personalActual by remember { mutableStateOf<PersonalDto?>(null) }
     
-    // Helper de biometría
     val biometricHelper = remember { BiometricHelper(context) }
     val isBiometricAvailable = remember { biometricHelper.isBiometricAvailable() }
     val isEmulator = remember { DeviceHelper.isEmulator() }
     
-    // Cargar datos del personal desde el backend
     LaunchedEffect(Unit) {
         val token = SecurePrefs.getToken(context)
         if (token != null) {
             val userId = JwtUtils.extractId(token)
             if (userId != null) {
                 try {
-                    // Obtener usuario para saber el personalId
                     val api = ApiClient.getClient(context)
                     val usuarioResponse = api.obtenerUsuario(userId)
                     if (usuarioResponse.isSuccessful && usuarioResponse.body() != null) {
@@ -88,7 +84,6 @@ fun EditProfileScreen(
                         val personalId = usuario.personal?.idPersonal
                         
                         if (personalId != null) {
-                            // Obtener datos del personal
                             val personalRepo = PersonalRepository(context)
                             val personalResult = personalRepo.obtenerPersonal(personalId)
                             
@@ -96,7 +91,6 @@ fun EditProfileScreen(
                                 personalActual = personalResult.getOrNull()
                                 val personal = personalActual
                                 
-                                // Cargar datos del backend si existen
                                 if (personal != null) {
                                     nombre = SettingsPrefs.getCustomName(context) 
                                         ?: "${personal.nombre ?: ""} ${personal.apellPaterno ?: ""} ${personal.apellMaterno ?: ""}".trim()
@@ -108,13 +102,11 @@ fun EditProfileScreen(
                         }
                     }
                 } catch (e: Exception) {
-                    // Si falla, usar datos locales
                 }
             }
         }
     }
     
-    // Launcher para seleccionar imagen
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -125,12 +117,10 @@ fun EditProfileScreen(
         }
     }
     
-    // Validaciones
     val isNombreValid = nombre.length >= 2
     val isEmailValid = email.contains("@") && email.contains(".")
     val isFormValid = isNombreValid && isEmailValid
     
-    // Función interna para guardar (después de verificar huella)
     fun guardarPerfilReal() {
         if (isFormValid && personalActual != null) {
             isLoading = true
@@ -138,13 +128,11 @@ fun EditProfileScreen(
                 try {
                     val personalId = personalActual!!.idPersonal
                     if (personalId != null) {
-                        // Separar nombre completo en partes
                         val partesNombre = nombre.trim().split(" ")
                         val nuevoNombre = partesNombre.firstOrNull() ?: ""
                         val apellPaterno = partesNombre.getOrNull(1) ?: ""
                         val apellMaterno = partesNombre.drop(2).joinToString(" ") ?: ""
                         
-                        // Crear DTO actualizado
                         val personalActualizado = PersonalDto(
                             idPersonal = personalId,
                             cargo = personalActual!!.cargo,
@@ -158,12 +146,10 @@ fun EditProfileScreen(
                             email = email
                         )
                         
-                        // Actualizar en el backend
                         val personalRepo = PersonalRepository(context)
                         val result = personalRepo.actualizarPersonal(personalId, personalActualizado)
                         
                         if (result.isSuccess) {
-                            // Guardar también localmente para mostrar inmediatamente
                             SettingsPrefs.setCustomName(context, nombre)
                             SettingsPrefs.setCustomEmail(context, email)
                             SettingsPrefs.setCustomPhone(context, telefono)
@@ -193,7 +179,6 @@ fun EditProfileScreen(
                 }
             }
         } else if (personalActual == null) {
-            // Si no hay personal, solo guardar localmente
             SettingsPrefs.setCustomName(context, nombre)
             SettingsPrefs.setCustomEmail(context, email)
             SettingsPrefs.setCustomPhone(context, telefono)
@@ -206,17 +191,14 @@ fun EditProfileScreen(
         }
     }
     
-    // Función para guardar (verifica huella primero)
     fun guardarPerfil() {
         if (!isFormValid) return
         
-        // Si es emulador en DEBUG, no pedir huella
         if (isEmulator && BuildConfig.DEBUG) {
             guardarPerfilReal()
             return
         }
         
-        // Si no hay biometría disponible, bloquear
         if (!isBiometricAvailable) {
             Toast.makeText(
                 context,
@@ -226,7 +208,6 @@ fun EditProfileScreen(
             return
         }
         
-        // Pedir huella antes de guardar
         if (context is FragmentActivity) {
             biometricHelper.authenticate(
                 activity = context,
@@ -307,7 +288,6 @@ fun EditProfileScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
             
-            // ===== FOTO DE PERFIL =====
             Box(
                 modifier = Modifier.size(140.dp),
                 contentAlignment = Alignment.Center
@@ -341,7 +321,6 @@ fun EditProfileScreen(
                     }
                 }
                 
-                // Botón de editar foto
                 FloatingActionButton(
                     onClick = { showImageOptions = true },
                     modifier = Modifier
@@ -368,7 +347,6 @@ fun EditProfileScreen(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // ===== FORMULARIO =====
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -389,7 +367,6 @@ fun EditProfileScreen(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     
-                    // Campo: Nombre completo
                     OutlinedTextField(
                         value = nombre,
                         onValueChange = { nombre = it },
@@ -407,7 +384,6 @@ fun EditProfileScreen(
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Campo: Email
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -426,7 +402,6 @@ fun EditProfileScreen(
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Campo: Teléfono
                     OutlinedTextField(
                         value = telefono,
                         onValueChange = { telefono = it },
@@ -444,7 +419,6 @@ fun EditProfileScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // ===== INFORMACIÓN ADICIONAL (solo lectura) =====
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -499,7 +473,6 @@ fun EditProfileScreen(
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            // ===== BOTÓN GUARDAR =====
             Button(
                 onClick = { guardarPerfil() },
                 modifier = Modifier
@@ -527,7 +500,6 @@ fun EditProfileScreen(
         }
     }
     
-    // ===== DIÁLOGO: OPCIONES DE IMAGEN =====
     if (showImageOptions) {
         AlertDialog(
             onDismissRequest = { showImageOptions = false },
@@ -541,7 +513,6 @@ fun EditProfileScreen(
             title = { Text("Foto de perfil") },
             text = {
                 Column {
-                    // Opción: Seleccionar de galería
                     ListItem(
                         headlineContent = { Text("Seleccionar de galería") },
                         leadingContent = {
@@ -553,7 +524,6 @@ fun EditProfileScreen(
                         }
                     )
                     
-                    // Opción: Eliminar foto
                     if (profileImageUri != null) {
                         ListItem(
                             headlineContent = { 
