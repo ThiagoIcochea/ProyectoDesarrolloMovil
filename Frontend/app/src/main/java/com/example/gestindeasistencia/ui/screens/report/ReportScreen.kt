@@ -221,6 +221,16 @@ fun calcularResumen(asistencias: List<com.example.gestindeasistencia.data.models
 	val inicioDate = try { sdfDate.parse(periodoInicio) } catch (e: Exception) { null }
 	val finDate = try { sdfDate.parse(periodoFin) } catch (e: Exception) { null }
 
+	// asegurar que el fin no supere la fecha actual (usar hoy como tope)
+	val todayCal = Calendar.getInstance()
+	todayCal.set(Calendar.HOUR_OF_DAY, 0); todayCal.set(Calendar.MINUTE, 0); todayCal.set(Calendar.SECOND, 0); todayCal.set(Calendar.MILLISECOND, 0)
+	val todayDate = todayCal.time
+	val finDateEffective = when {
+		finDate == null -> todayDate
+		finDate.after(todayDate) -> todayDate
+		else -> finDate
+	}
+
 	fun workingDatesBetween(start: java.util.Date?, end: java.util.Date?): List<java.util.Date> {
 		if (start == null || end == null) return emptyList()
 		val cal = Calendar.getInstance()
@@ -290,17 +300,29 @@ fun calcularResumen(asistencias: List<com.example.gestindeasistencia.data.models
 			else -> if (inicioEfectivoDate.after(inicioDate)) inicioEfectivoDate else inicioDate
 		}
 
-		val diasLaborales = workingDatesBetween(startDate, finDate)
+		// determinar fecha final por usuario: no contar faltas después de la última marca del usuario
+		val ultimaMarcaStr = registrosPersonal.maxByOrNull { it.fecha ?: "" }?.fecha
+		val ultimaMarcaDate = try { parseDateFlexible(ultimaMarcaStr) } catch (e: Exception) { null }
+		val ultimaMarcaDateOnly = ultimaMarcaDate?.let {
+			val c = Calendar.getInstance(); c.time = it; c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0); c.time
+		}
+		val finDateUser = when {
+			ultimaMarcaDateOnly != null && finDateEffective != null && ultimaMarcaDateOnly.before(finDateEffective) -> ultimaMarcaDateOnly
+			else -> finDateEffective
+		}
 
-		var diasConMarca = 0
+		val diasLaborales = workingDatesBetween(startDate, finDateUser)
+		val diasLaboralesStr = diasLaborales.map { sdfDate.format(it) }.toSet()
+
+		// calcular dias con marca como conjunto único de fechas que intersectan diasLaborales
+		val fechasConMarca = registrosPersonal.mapNotNull { it.fecha?.take(10) }.toSet()
+		val diasPresentes = fechasConMarca.intersect(diasLaboralesStr)
+
 		var demoras = 0
 
-		for (dia in diasLaborales) {
-			val diaStr = sdfDate.format(dia)
-			val marcas = registrosPorFecha[diaStr]
-			if (marcas.isNullOrEmpty()) continue
-
-			// buscar marca de entrada preferible
+		// para cada día presente, calcular si la marca de entrada fue tardía
+		for (diaStr in diasPresentes) {
+			val marcas = registrosPorFecha[diaStr] ?: continue
 			val entryMarcas = marcas.filter { r ->
 				val desc = r.movimiento?.descripcion?.lowercase() ?: ""
 				val cod = r.movimiento?.abreDesc ?: ""
@@ -308,17 +330,13 @@ fun calcularResumen(asistencias: List<com.example.gestindeasistencia.data.models
 			}
 			val marca = entryMarcas.minByOrNull { it.fecha ?: "" } ?: marcas.minByOrNull { it.fecha ?: "" }
 			val minutos = marca?.fecha?.let { fh ->
-				val t = parseDateFlexible(fh)
-				if (t != null) {
-					val cal = Calendar.getInstance(); cal.time = t; cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
-				} else null
+				parseDateFlexible(fh)?.let { t -> val c = Calendar.getInstance(); c.time = t; c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE) }
 			}
-			diasConMarca += 1
 			if (minutos != null && minutos > limiteTardanzaMinutes) demoras += 1
 		}
 
-		val faltas = diasLaborales.size - diasConMarca
-		val totalAsistencias = diasConMarca
+		val totalAsistencias = diasPresentes.size
+		val faltas = diasLaboralesStr.size - totalAsistencias
 
 		val descuentoPercent = faltas * 5.0 + demoras * 2.0
 		val nombre = listOfNotNull(personal.nombre, personal.apellPaterno, personal.apellMaterno).joinToString(" ").ifBlank { "Sin nombre" }
