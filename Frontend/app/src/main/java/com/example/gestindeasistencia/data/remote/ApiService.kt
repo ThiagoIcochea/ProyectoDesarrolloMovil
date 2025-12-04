@@ -83,6 +83,11 @@ interface ApiService {
     @DELETE("movimiento/{id}")
     suspend fun eliminarMovimiento(@Path("id") id: Int): Response<Void>
 
+    @PUT("autorizacion/{id}/aprobar")
+    suspend fun aprobarAutorizacion(@Path("id") id: Int): Response<AutorizacionDto>
+
+    @PUT("autorizacion/{id}/rechazar")
+    suspend fun rechazarAutorizacion(@Path("id") id: Int): Response<AutorizacionDto>
 
     // --- DOCUMENTO ---
     @GET("documento")

@@ -13,6 +13,8 @@ import com.example.gestindeasistencia.viewmodels.AsistenciaViewModel
 import com.example.gestindeasistencia.viewmodels.LoginViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.gestindeasistencia.ui.screens.autorizacion.AutorizacionFormScreen
+import com.example.gestindeasistencia.ui.screens.autorizacion.AutorizacionScreen
 import com.example.gestindeasistencia.ui.screens.personal.PersonalDetailScreen
 import com.example.gestindeasistencia.ui.screens.personal.PersonalFormScreen
 import com.example.gestindeasistencia.ui.screens.personal.PersonalListScreen
@@ -21,6 +23,7 @@ import com.example.gestindeasistencia.ui.screens.report.ReportScreen
 import com.example.gestindeasistencia.ui.screens.config.ConfigScreen
 import com.example.gestindeasistencia.ui.screens.config.ChangePasswordScreen
 import com.example.gestindeasistencia.ui.screens.config.EditProfileScreen
+import com.example.gestindeasistencia.viewmodels.AutorizacionViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -31,6 +34,7 @@ fun AppNavGraph(
     asistenciaViewModel: AsistenciaViewModel,
     onDarkThemeChanged: (Boolean) -> Unit = {}
 ) {
+    val authViewModel: AutorizacionViewModel = viewModel(factory = AutorizacionViewModel.Factory(LocalContext.current))
     NavHost(
         navController = navController,
         startDestination = "login"
@@ -79,7 +83,10 @@ fun AppNavGraph(
                     navController.navigate("config/$encodedUsername/$encodedCargo") 
                 },
                 onAsistencia = { navController.navigate("asistencia/$username") },
-                onLogout = {
+                onAutorizaciones = {
+                    val cargoEncoded = java.net.URLEncoder.encode(cargo, "UTF-8")
+                    navController.navigate("autorizacionesList/$cargoEncoded")
+                },                onLogout = {
                     loginViewModel.logout()
                     navController.navigate("login") {
                         popUpTo("dashboard") { inclusive = true }
@@ -216,6 +223,28 @@ fun AppNavGraph(
                 }
             )
         }
+        composable(
+            route = "autorizacionesList/{cargo}",
+            arguments = listOf(navArgument("cargo") { type = NavType.StringType })
+        ) { backStack ->
+            val cargo = java.net.URLDecoder.decode(backStack.arguments?.getString("cargo") ?: "", "UTF-8")
 
+            AutorizacionScreen(
+                viewModel = authViewModel,
+                userCargo = cargo,
+                onBack = { navController.popBackStack() },
+                onNuevaSolicitud = { navController.navigate("autorizacionesForm") }
+            )
+        }
+        composable("autorizacionesForm") {
+            AutorizacionFormScreen(
+                viewModel = authViewModel,
+                onBack = { navController.popBackStack() },
+                onSuccess = {
+                    authViewModel.cargarDatos()
+                    navController.popBackStack()
+                }
+            )
+        }
     }
 }

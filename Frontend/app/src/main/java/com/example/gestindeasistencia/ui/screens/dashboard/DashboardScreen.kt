@@ -43,6 +43,7 @@ fun DashboardScreen(
     onPerfil: () -> Unit,
     onConfig: () -> Unit,
     onAsistencia: () -> Unit = {},
+    onAutorizaciones: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     Scaffold(
@@ -197,6 +198,13 @@ fun DashboardScreen(
                 icon = Icons.Filled.AssignmentTurnedIn,
                 onClick = onAsistencia
             )
+
+            DashboardCard(
+                title = "Permisos y Salidas",
+                icon = Icons.Filled.ExitToApp,
+                onClick = onAutorizaciones
+            )
+
             // Mostrar 'Reportes' solo a administradores
             if (userCargo == "Administrador de Sistemas") {
                 DashboardCard(
@@ -217,6 +225,8 @@ fun DashboardScreen(
                 icon = Icons.Filled.Settings,
                 onClick = onConfig
             )
+
+
 
 
             //acceso para el administrador
