@@ -3,10 +3,16 @@ package com.example.gestindeasistencia
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.rememberNavController
 import com.example.gestindeasistencia.ui.navigation.AppNavGraph
+import com.example.gestindeasistencia.ui.theme.GestiónDeAsistenciaTheme
+import com.example.gestindeasistencia.utils.SettingsPrefs
 import com.example.gestindeasistencia.viewmodels.AsistenciaViewModel
 import com.example.gestindeasistencia.viewmodels.LoginViewModel
 
@@ -23,14 +29,25 @@ class MainActivity : FragmentActivity() {
         val asistenciaViewModel = AsistenciaViewModel(this)
 
         setContent {
-            MaterialTheme {
-
+            // Estado del tema oscuro
+            val systemDarkTheme = isSystemInDarkTheme()
+            var isDarkTheme by remember { 
+                mutableStateOf(SettingsPrefs.isDarkTheme(applicationContext)) 
+            }
+            
+            GestiónDeAsistenciaTheme(
+                darkTheme = isDarkTheme,
+                dynamicColor = false // Desactivar color dinámico para mantener consistencia
+            ) {
                 val navController = rememberNavController()
 
                 AppNavGraph(
                     navController = navController,
                     loginViewModel = loginViewModel,
-                    asistenciaViewModel = asistenciaViewModel
+                    asistenciaViewModel = asistenciaViewModel,
+                    onDarkThemeChanged = { enabled ->
+                        isDarkTheme = enabled
+                    }
                 )
             }
         }

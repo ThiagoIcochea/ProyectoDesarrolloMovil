@@ -18,12 +18,18 @@ import com.example.gestindeasistencia.ui.screens.personal.PersonalFormScreen
 import com.example.gestindeasistencia.ui.screens.personal.PersonalListScreen
 import com.example.gestindeasistencia.viewmodels.PersonalViewModel
 import com.example.gestindeasistencia.ui.screens.report.ReportScreen
+import com.example.gestindeasistencia.ui.screens.config.ConfigScreen
+import com.example.gestindeasistencia.ui.screens.config.ChangePasswordScreen
+import com.example.gestindeasistencia.ui.screens.config.EditProfileScreen
+import java.net.URLDecoder
+import java.net.URLEncoder
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
     loginViewModel: LoginViewModel,
-    asistenciaViewModel: AsistenciaViewModel
+    asistenciaViewModel: AsistenciaViewModel,
+    onDarkThemeChanged: (Boolean) -> Unit = {}
 ) {
     NavHost(
         navController = navController,
@@ -62,8 +68,16 @@ fun AppNavGraph(
                 userCargo = cargo,
                 onGestionPersonal = { navController.navigate("personal") },
                 onReportes = { navController.navigate("reportes") },
-                onPerfil = { navController.navigate("perfil") },
-                onConfig = { navController.navigate("config") },
+                onPerfil = { 
+                    val encodedUsername = URLEncoder.encode(username, "UTF-8")
+                    val encodedCargo = URLEncoder.encode(cargo, "UTF-8")
+                    navController.navigate("editProfile/$encodedUsername/$encodedCargo") 
+                },
+                onConfig = { 
+                    val encodedUsername = URLEncoder.encode(username, "UTF-8")
+                    val encodedCargo = URLEncoder.encode(cargo, "UTF-8")
+                    navController.navigate("config/$encodedUsername/$encodedCargo") 
+                },
                 onAsistencia = { navController.navigate("asistencia/$username") },
                 onLogout = {
                     loginViewModel.logout()
@@ -73,6 +87,59 @@ fun AppNavGraph(
                 }
             )
         }
+        
+        // ===== CONFIGURACIÓN =====
+        composable(
+            route = "config/{username}/{cargo}",
+            arguments = listOf(
+                navArgument("username") { type = NavType.StringType },
+                navArgument("cargo") { type = NavType.StringType }
+            )
+        ) { backStack ->
+            val username = URLDecoder.decode(backStack.arguments?.getString("username") ?: "", "UTF-8")
+            val cargo = URLDecoder.decode(backStack.arguments?.getString("cargo") ?: "", "UTF-8")
+            
+            ConfigScreen(
+                userName = username,
+                userCargo = cargo,
+                onBack = { navController.popBackStack() },
+                onEditProfile = { 
+                    val encodedUsername = URLEncoder.encode(username, "UTF-8")
+                    val encodedCargo = URLEncoder.encode(cargo, "UTF-8")
+                    navController.navigate("editProfile/$encodedUsername/$encodedCargo") 
+                },
+                onChangePassword = { navController.navigate("changePassword") },
+                onDarkThemeChanged = onDarkThemeChanged
+            )
+        }
+        
+        // ===== EDITAR PERFIL =====
+        composable(
+            route = "editProfile/{username}/{cargo}",
+            arguments = listOf(
+                navArgument("username") { type = NavType.StringType },
+                navArgument("cargo") { type = NavType.StringType }
+            )
+        ) { backStack ->
+            val username = URLDecoder.decode(backStack.arguments?.getString("username") ?: "", "UTF-8")
+            val cargo = URLDecoder.decode(backStack.arguments?.getString("cargo") ?: "", "UTF-8")
+            
+            EditProfileScreen(
+                userName = username,
+                userEmail = "$username@empresa.com", // Email por defecto basado en usuario
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
+            )
+        }
+        
+        // ===== CAMBIAR CONTRASEÑA =====
+        composable("changePassword") {
+            ChangePasswordScreen(
+                onBack = { navController.popBackStack() },
+                onPasswordChanged = { navController.popBackStack() }
+            )
+        }
+        
         composable("personal") {
             val vm: PersonalViewModel = viewModel(factory = PersonalViewModel.Factory(LocalContext.current))
             PersonalListScreen(

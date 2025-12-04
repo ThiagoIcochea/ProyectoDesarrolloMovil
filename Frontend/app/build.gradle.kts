@@ -47,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -79,6 +80,9 @@ dependencies {
     
     // ---- FRAGMENT (Para BiometricPrompt) ----
     implementation("androidx.fragment:fragment-ktx:1.6.2")
+    
+    // ---- COIL (Carga de imágenes) ----
+    implementation("io.coil-kt:coil-compose:2.5.0")
     implementation(libs.androidx.foundation)
     implementation(libs.androidx.ui.text)
     testImplementation(libs.junit)

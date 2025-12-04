@@ -25,8 +25,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
+import com.example.gestindeasistencia.BuildConfig
 import com.example.gestindeasistencia.data.models.AsistenciaCreateRequest
 import com.example.gestindeasistencia.utils.BiometricHelper
+import com.example.gestindeasistencia.utils.DeviceHelper
 import com.example.gestindeasistencia.utils.GeoConfig
 import com.example.gestindeasistencia.utils.LocationHelper
 import com.example.gestindeasistencia.viewmodels.AsistenciaViewModel
@@ -566,7 +568,43 @@ fun EmpleadoAsistenciaScreen(
         if (showBiometricDialog && context is FragmentActivity) {
             LaunchedEffect(Unit) {
                 try {
-                    if (biometricHelper?.isBiometricAvailable() == true) {
+                    val isEmulator = DeviceHelper.isEmulator()
+                    
+                    // Si es emulador en DEBUG, no pedir huella (permitir sin huella)
+                    if (isEmulator && BuildConfig.DEBUG) {
+                        showBiometricDialog = false
+                        Toast.makeText(
+                            context,
+                            "⚠️ MODO PRUEBA (Emulador)\n\nSin huella - solo para desarrollo.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        
+                        val personalId = viewModel.obtenerPersonalIdDeToken()
+                        if (personalId != null && pendingMovimientoId != null && 
+                            currentLatitude != null && currentLongitude != null) {
+                            
+                            val ipConLocation = AsistenciaCreateRequest.formatIpWithLocation(
+                                "192.168.1.103",
+                                currentLatitude!!,
+                                currentLongitude!!
+                            )
+                            
+                            viewModel.marcarAsistencia(
+                                personalId = personalId,
+                                movimientoId = pendingMovimientoId!!,
+                                ipConLocation = ipConLocation,
+                                onSuccess = {
+                                    viewModel.cargarAsistencias()
+                                },
+                                onError = { error ->
+                                    Toast.makeText(context, "Error: $error", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
+                        pendingMovimientoId = null
+                        pendingMovimientoName = null
+                    } else if (biometricHelper?.isBiometricAvailable() == true) {
+                        // Dispositivo físico o emulador en RELEASE - pedir huella
                         biometricHelper?.authenticate(
                             activity = context,
                             title = "Autenticación requerida",
@@ -608,36 +646,49 @@ fun EmpleadoAsistenciaScreen(
                             }
                         )
                     } else {
+                        // Huella NO disponible
                         showBiometricDialog = false
-                        Toast.makeText(
-                            context,
-                            "Sensor biométrico no disponible. Marcando sin huella...",
-                            Toast.LENGTH_SHORT
-                        ).show()
                         
-                        // Marcar sin biometría
-                        val personalId = viewModel.obtenerPersonalIdDeToken()
-                        if (personalId != null && pendingMovimientoId != null && 
-                            currentLatitude != null && currentLongitude != null) {
+                        val isEmulator = DeviceHelper.isEmulator()
+                        val shouldRequire = DeviceHelper.shouldRequireBiometric()
+                        
+                        // Si es emulador en DEBUG, permitir sin huella para pruebas
+                        if (isEmulator && BuildConfig.DEBUG) {
+                            Toast.makeText(
+                                context,
+                                "⚠️ MODO PRUEBA (Emulador)\n\nSin huella - solo para desarrollo.",
+                                Toast.LENGTH_LONG
+                            ).show()
                             
-                            val ipConLocation = AsistenciaCreateRequest.formatIpWithLocation(
-                                "192.168.1.103",
-                                currentLatitude!!,
-                                currentLongitude!!
-                            )
-                            
-                            viewModel.marcarAsistencia(
-                                personalId = personalId,
-                                movimientoId = pendingMovimientoId!!,
-                                ipConLocation = ipConLocation,
-                                onSuccess = {
-                                    // Forzar recarga de asistencias
-                                    viewModel.cargarAsistencias()
-                                },
-                                onError = { error ->
-                                    Toast.makeText(context, "Error: $error", Toast.LENGTH_SHORT).show()
-                                }
-                            )
+                            val personalId = viewModel.obtenerPersonalIdDeToken()
+                            if (personalId != null && pendingMovimientoId != null && 
+                                currentLatitude != null && currentLongitude != null) {
+                                
+                                val ipConLocation = AsistenciaCreateRequest.formatIpWithLocation(
+                                    "192.168.1.103",
+                                    currentLatitude!!,
+                                    currentLongitude!!
+                                )
+                                
+                                viewModel.marcarAsistencia(
+                                    personalId = personalId,
+                                    movimientoId = pendingMovimientoId!!,
+                                    ipConLocation = ipConLocation,
+                                    onSuccess = {
+                                        viewModel.cargarAsistencias()
+                                    },
+                                    onError = { error ->
+                                        Toast.makeText(context, "Error: $error", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            }
+                        } else if (shouldRequire) {
+                            // Dispositivo físico sin huella o emulador en RELEASE - BLOQUEAR
+                            Toast.makeText(
+                                context,
+                                "⚠️ HUELLA OBLIGATORIA\n\nEste dispositivo no tiene sensor de huella digital. No puedes marcar asistencia.",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                         pendingMovimientoId = null
                         pendingMovimientoName = null
@@ -650,33 +701,50 @@ fun EmpleadoAsistenciaScreen(
                 }
             }
         } else if (showBiometricDialog) {
-            // Si no es FragmentActivity, marcar sin biometría
+            // Si no es FragmentActivity
             LaunchedEffect(Unit) {
                 showBiometricDialog = false
-                Toast.makeText(context, "Marcando asistencia...", Toast.LENGTH_SHORT).show()
                 
-                val personalId = viewModel.obtenerPersonalIdDeToken()
-                if (personalId != null && pendingMovimientoId != null && 
-                    currentLatitude != null && currentLongitude != null) {
+                val isEmulator = DeviceHelper.isEmulator()
+                val shouldRequire = DeviceHelper.shouldRequireBiometric()
+                
+                // Si es emulador en DEBUG, permitir sin huella para pruebas
+                if (isEmulator && BuildConfig.DEBUG) {
+                    Toast.makeText(
+                        context,
+                        "⚠️ MODO PRUEBA (Emulador)\n\nSin verificación biométrica - solo desarrollo.",
+                        Toast.LENGTH_LONG
+                    ).show()
                     
-                    val ipConLocation = AsistenciaCreateRequest.formatIpWithLocation(
-                        "192.168.1.103",
-                        currentLatitude!!,
-                        currentLongitude!!
-                    )
-                    
-                    viewModel.marcarAsistencia(
-                        personalId = personalId,
-                        movimientoId = pendingMovimientoId!!,
-                        ipConLocation = ipConLocation,
-                        onSuccess = {
-                            // Forzar recarga de asistencias
-                            viewModel.cargarAsistencias()
-                        },
-                        onError = { error ->
-                            Toast.makeText(context, "Error: $error", Toast.LENGTH_SHORT).show()
-                        }
-                    )
+                    val personalId = viewModel.obtenerPersonalIdDeToken()
+                    if (personalId != null && pendingMovimientoId != null && 
+                        currentLatitude != null && currentLongitude != null) {
+                        
+                        val ipConLocation = AsistenciaCreateRequest.formatIpWithLocation(
+                            "192.168.1.103",
+                            currentLatitude!!,
+                            currentLongitude!!
+                        )
+                        
+                        viewModel.marcarAsistencia(
+                            personalId = personalId,
+                            movimientoId = pendingMovimientoId!!,
+                            ipConLocation = ipConLocation,
+                            onSuccess = {
+                                viewModel.cargarAsistencias()
+                            },
+                            onError = { error ->
+                                Toast.makeText(context, "Error: $error", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+                } else if (shouldRequire) {
+                    // Dispositivo físico sin huella o emulador en RELEASE - BLOQUEAR
+                    Toast.makeText(
+                        context, 
+                        "⚠️ HUELLA OBLIGATORIA\n\nNo se puede verificar la huella. Contacta al administrador.",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
                 pendingMovimientoId = null
                 pendingMovimientoName = null

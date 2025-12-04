@@ -14,11 +14,24 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Assessment
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.example.gestindeasistencia.data.remote.ApiClient
+import com.example.gestindeasistencia.data.repositorio.PersonalRepository
+import com.example.gestindeasistencia.utils.JwtUtils
+import com.example.gestindeasistencia.utils.SecurePrefs
+import com.example.gestindeasistencia.utils.SettingsPrefs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,23 +56,71 @@ fun DashboardScreen(
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFF6750A4),
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 actions = {
                     IconButton(onClick = onLogout) {
                         Icon(
                             imageVector = Icons.Filled.Logout,
-                            contentDescription = "Cerrar sesión",
-                            tint = Color.White // Usar blanco
+                            contentDescription = "Cerrar sesión"
                         )
                     }
                 }
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
+        val context = LocalContext.current
+        
+        // Obtener foto y nombre personalizados (se lee cada vez que se renderiza para que se actualice)
+        val profileImageUri = SettingsPrefs.getProfileImageUri(context)
+        var nombreBackend by remember { mutableStateOf<String?>(null) }
+        
+        // Cargar nombre del Personal desde el backend
+        LaunchedEffect(Unit) {
+            val token = SecurePrefs.getToken(context)
+            if (token != null) {
+                val userId = JwtUtils.extractId(token)
+                if (userId != null) {
+                    try {
+                        val api = ApiClient.getClient(context)
+                        val usuarioResponse = api.obtenerUsuario(userId)
+                        if (usuarioResponse.isSuccessful && usuarioResponse.body() != null) {
+                            val usuario = usuarioResponse.body()!!
+                            val personalId = usuario.personal?.idPersonal
+                            
+                            if (personalId != null) {
+                                val personalRepo = PersonalRepository(context)
+                                val personalResult = personalRepo.obtenerPersonal(personalId)
+                                
+                                if (personalResult.isSuccess) {
+                                    val personal = personalResult.getOrNull()
+                                    if (personal != null) {
+                                        // Construir nombre completo desde el backend
+                                        val nombreCompleto = listOfNotNull(
+                                            personal.nombre,
+                                            personal.apellPaterno,
+                                            personal.apellMaterno
+                                        ).joinToString(" ").trim()
+                                        
+                                        if (nombreCompleto.isNotEmpty()) {
+                                            nombreBackend = nombreCompleto
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Si falla, usar datos locales
+                    }
+                }
+            }
+        }
+        
+        // Leer nombre personalizado o del backend (se actualiza cada vez que se renderiza)
+        val displayName = SettingsPrefs.getCustomName(context) ?: nombreBackend ?: userName
 
         Column(
             modifier = Modifier
@@ -73,7 +134,7 @@ fun DashboardScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFEADDE8)
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
@@ -81,32 +142,46 @@ fun DashboardScreen(
                     modifier = Modifier.padding(16.dp).fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Avatar con foto o inicial
                     Box(
                         modifier = Modifier
                             .size(60.dp)
-                            .background(Color(0xFF6750A4), CircleShape),
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = userName.first().uppercase(),
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (profileImageUri != null) {
+                            AsyncImage(
+                                model = profileImageUri,
+                                contentDescription = "Foto de perfil",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = displayName.first().uppercase(),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Column {
                         Text(
-                            text = userName,
+                            text = displayName,
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
                             text = userCargo,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF6750A4)
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -148,7 +223,11 @@ fun DashboardScreen(
             if (userCargo == "Administrador de Sistemas") {
                 Spacer(Modifier.height(24.dp))
 
-                Text("Opciones de Administración", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Opciones de Administración", 
+                    style = MaterialTheme.typography.titleMedium, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(Modifier.height(8.dp))
 
                 DashboardCard(
@@ -176,7 +255,7 @@ fun DashboardCard(
         shape = RoundedCornerShape(14.dp),
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -187,14 +266,15 @@ fun DashboardCard(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = Color(0xFF6750A4),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
