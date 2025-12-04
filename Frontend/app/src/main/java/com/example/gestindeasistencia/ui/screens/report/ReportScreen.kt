@@ -248,9 +248,15 @@ fun calcularResumen(asistencias: List<com.example.gestindeasistencia.data.models
 		return null
 	}
 
-	// Build a map of personalId -> personal (from usuarios and from asistencias)
+	// Build a map of personalId -> personal: include ALL usuarios (so admin can see everyone)
+	// plus any personal referenced in asistencias not present in usuarios
 	val personalMap = mutableMapOf<Int, com.example.gestindeasistencia.data.models.PersonalDto>()
-	usuarios.forEach { u -> u.personal?.idPersonal?.let { personalMap[it] = u.personal!! } }
+	usuarios.forEach { u ->
+		val pid = u.personal?.idPersonal
+		val p = u.personal
+		if (pid != null && p != null) personalMap[pid] = p
+	}
+	// ensure we also include personals that appear only in asistencias
 	asistencias.forEach { a ->
 		val pid = a.personal?.idPersonal
 		val p = a.personal
