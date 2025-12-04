@@ -122,11 +122,14 @@ fun DashboardScreen(
                 icon = Icons.Filled.AssignmentTurnedIn,
                 onClick = onAsistencia
             )
-            DashboardCard(
-                title = "Reportes",
-                icon = Icons.Outlined.Assessment,
-                onClick = onReportes
-            )
+            // Mostrar 'Reportes' solo a administradores
+            if (userCargo == "Administrador de Sistemas") {
+                DashboardCard(
+                    title = "Reportes",
+                    icon = Icons.Outlined.Assessment,
+                    onClick = onReportes
+                )
+            }
 
             DashboardCard(
                 title = "Mi Perfil",
@@ -154,11 +157,7 @@ fun DashboardScreen(
                     onClick = onGestionPersonal
                 )
 
-                DashboardCard(
-                    title = "Gestión de Documentos",
-                    icon = Icons.Filled.ManageAccounts,
-                    onClick = { /* pendiente */ }
-                )
+                // El apartado "Gestión de Documentos" eliminado: ya no estará disponible
             }
         }
     }
