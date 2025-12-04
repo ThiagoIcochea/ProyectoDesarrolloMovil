@@ -39,6 +39,7 @@ fun DashboardScreen(
     userName: String,
     userCargo: String,
     onGestionPersonal: () -> Unit,
+    onGestionUsuarios:() -> Unit,
     onReportes: () -> Unit,
     onPerfil: () -> Unit,
     onConfig: () -> Unit,
@@ -244,6 +245,13 @@ fun DashboardScreen(
                     title = "Gestión de Personal",
                     icon = Icons.Filled.ManageAccounts,
                     onClick = onGestionPersonal
+                )
+
+                DashboardCard(
+                    title = "Gestión de Usuarios",
+                    icon = Icons.Filled.Person,
+                    onClick = onGestionUsuarios
+
                 )
 
                 // El apartado "Gestión de Documentos" eliminado: ya no estará disponible

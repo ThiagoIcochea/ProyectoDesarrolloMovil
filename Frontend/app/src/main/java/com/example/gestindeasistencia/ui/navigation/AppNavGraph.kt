@@ -23,7 +23,11 @@ import com.example.gestindeasistencia.ui.screens.report.ReportScreen
 import com.example.gestindeasistencia.ui.screens.config.ConfigScreen
 import com.example.gestindeasistencia.ui.screens.config.ChangePasswordScreen
 import com.example.gestindeasistencia.ui.screens.config.EditProfileScreen
+import com.example.gestindeasistencia.ui.screens.usuario.UsuarioDetailScreen
+import com.example.gestindeasistencia.ui.screens.usuario.UsuarioFormScreen
+import com.example.gestindeasistencia.ui.screens.usuario.UsuarioListScreen
 import com.example.gestindeasistencia.viewmodels.AutorizacionViewModel
+import com.example.gestindeasistencia.viewmodels.UsuarioViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -71,6 +75,7 @@ fun AppNavGraph(
                 userName = username,
                 userCargo = cargo,
                 onGestionPersonal = { navController.navigate("personal") },
+                onGestionUsuarios = { navController.navigate("usuarios")},
                 onReportes = { navController.navigate("reportes") },
                 onPerfil = { 
                     val encodedUsername = URLEncoder.encode(username, "UTF-8")
@@ -186,6 +191,66 @@ fun AppNavGraph(
                 }
             )
         }
+
+        composable("usuarios"){
+            val vmu: UsuarioViewModel =  viewModel(factory = UsuarioViewModel.Factory(LocalContext.current))
+            UsuarioListScreen(
+                viewModel = vmu,
+                onSelect = { id -> navController.navigate("usuariodetalle/$id") },
+                onNew = { navController.navigate("usuariocrear") },
+                onBack = { navController.popBackStack() }
+
+            )
+        }
+        composable("usuariodetalle/{id}",
+        arguments = listOf(navArgument("id") { type = NavType.IntType })
+        ) { backStack ->
+        val id = backStack.arguments!!.getInt("id")
+        val vmu: UsuarioViewModel = viewModel(factory = UsuarioViewModel.Factory(LocalContext.current))
+            UsuarioDetailScreen(
+                idUsuario = id,
+                viewModel = vmu,
+                onBack = { navController.popBackStack() },
+                onEdit = { navController.navigate("usuarioEditar/$id") },
+                onDeleted = {
+                    navController.navigate("usuarios") {
+                        popUpTo("usuarios") { inclusive = true }
+                    }
+                }
+        )
+    }
+        composable("usuariocrear") {
+            val vm: UsuarioViewModel = viewModel(factory = UsuarioViewModel.Factory(LocalContext.current))
+            UsuarioFormScreen(
+                idUsuario = null,
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onSaved = {
+                    navController.navigate("usuarios") {
+                        popUpTo("usuarios") { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(
+            "usuarioeditar/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.IntType })
+        ) { backStack ->
+            val id = backStack.arguments!!.getInt("id")
+            val vm: UsuarioViewModel = viewModel(factory = UsuarioViewModel.Factory(LocalContext.current))
+            UsuarioFormScreen(
+                idUsuario = id,
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onSaved = {
+                    navController.navigate("usuarios") {
+                        popUpTo("usuarios") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        ////
         composable("personalEditar/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { backStack ->
             val id = backStack.arguments!!.getInt("id")
             val vm: PersonalViewModel = viewModel(factory = PersonalViewModel.Factory(LocalContext.current))

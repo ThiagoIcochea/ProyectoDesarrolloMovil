@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gestindeasistencia.data.repositorio.AuthRepository
+import com.example.gestindeasistencia.data.repositorio.UsuarioRepository
 import com.example.gestindeasistencia.utils.JwtUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,7 @@ sealed class LoginState {
 class LoginViewModel(private val context: Context) : ViewModel() {
 
     private val repo = AuthRepository(context)
+    private val usuarioRepo = UsuarioRepository(context)
 
     private val _state = MutableStateFlow<LoginState>(LoginState.Idle)
     val state: StateFlow<LoginState> = _state
@@ -32,12 +34,14 @@ class LoginViewModel(private val context: Context) : ViewModel() {
         viewModelScope.launch {
             _state.value = LoginState.Loading
             val result = repo.login(usuario, password)
+
             if (result.isSuccess) {
                 val token = result.getOrNull()!!
                 val payload = JwtUtils.decodePayload(token)
 
                 if (payload == null) {
                     _state.value = LoginState.Error("Token inválido")
+                    repo.logout()
                     return@launch
                 }
 
@@ -45,9 +49,48 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                 val cargo = payload.optString("cargo", null)
                 val id = payload.optInt("id", -1).takeIf { it >= 0 }
 
-                _state.value = LoginState.Success(token, username, cargo, id)
+                // VALIDACIÓN DE ESTADO: Obtener datos completos del usuario
+                if (id != null) {
+                    try {
+                        val usuarioResult = usuarioRepo.obtenerUsuario(id)
+
+                        if (usuarioResult.isSuccess) {
+                            val usuarioDto = usuarioResult.getOrNull()
+
+                            // Verificar si el usuario está activo
+                            if (usuarioDto?.estado == "ACTIVO") {
+                                _state.value = LoginState.Success(token, username, cargo, id)
+                            } else {
+                                // Usuario inactivo - cerrar sesión
+                                repo.logout()
+                                _state.value = LoginState.Error(
+                                    "Usuario inactivo. Contacte al administrador."
+                                )
+                            }
+                        } else {
+                            // Error al obtener usuario - permitir login (fallback)
+                            _state.value = LoginState.Success(token, username, cargo, id)
+                        }
+                    } catch (e: Exception) {
+                        // Error en la validación - permitir login (fallback)
+                        _state.value = LoginState.Success(token, username, cargo, id)
+                    }
+                } else {
+                    // No hay ID en el token - permitir login
+                    _state.value = LoginState.Success(token, username, cargo, id)
+                }
             } else {
-                _state.value = LoginState.Error(result.exceptionOrNull()?.message ?: "Error desconocido")
+                val errorMsg = result.exceptionOrNull()?.message ?: "Error desconocido"
+                _state.value = LoginState.Error(
+                    when {
+                        errorMsg.contains("Credenciales inválidas") ||
+                                errorMsg.contains("401") ||
+                                errorMsg.contains("403") ->
+                            "Usuario o contraseña incorrectos"
+                        else ->
+                            "Error de conexión: $errorMsg"
+                    }
+                )
             }
         }
     }

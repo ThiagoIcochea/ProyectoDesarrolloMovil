@@ -5,7 +5,6 @@ import com.example.gestindeasistencia.data.models.LoginRequest
 import com.example.gestindeasistencia.data.remote.ApiClient
 import com.example.gestindeasistencia.utils.SecurePrefs
 
-
 class AuthRepository(private val context: Context) {
 
     private val api = ApiClient.getClient(context)
