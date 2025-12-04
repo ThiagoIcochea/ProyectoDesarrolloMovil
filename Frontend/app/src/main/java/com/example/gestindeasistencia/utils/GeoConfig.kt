@@ -19,8 +19,8 @@ object GeoConfig {
      * 
      * Ejemplo: -12.021652585133255, -76.97859200294965 (Lima, Perú)
      */
-    const val EMPRESA_LATITUD = -12.129952
-    const val EMPRESA_LONGITUD = -76.948673
+    const val EMPRESA_LATITUD = 37.421998
+    const val EMPRESA_LONGITUD = -122.084000
     
     /**
      * Radio permitido en metros
