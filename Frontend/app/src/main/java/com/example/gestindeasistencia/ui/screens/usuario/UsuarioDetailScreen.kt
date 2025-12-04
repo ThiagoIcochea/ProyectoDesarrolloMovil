@@ -229,7 +229,6 @@ fun UsuarioDetailScreen(
         }
     }
 }
-
 @Composable
 fun DetailItem(label: String, value: String?) {
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
