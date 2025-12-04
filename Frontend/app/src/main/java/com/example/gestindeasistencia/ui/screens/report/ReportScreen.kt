@@ -216,110 +216,113 @@ fun StatIndicator(label: String, valor: String, color: Color, modifier: Modifier
 }
 
 fun calcularResumen(asistencias: List<com.example.gestindeasistencia.data.models.AsistenciaDto>, periodoInicio: String, periodoFin: String, usuarios: List<UsuarioDto>): List<ReportRow> {
-	// periodoInicio / periodoFin expected in yyyy-MM-dd
 	val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
 	val inicioDate = try { sdfDate.parse(periodoInicio) } catch (e: Exception) { null }
 	val finDate = try { sdfDate.parse(periodoFin) } catch (e: Exception) { null }
 
-	// helper: generate list of working dates (Mon-Fri) between inicio and fin
-	fun workingDatesBetween(start: java.util.Date?, end: java.util.Date?): List<String> {
+	fun workingDatesBetween(start: java.util.Date?, end: java.util.Date?): List<java.util.Date> {
 		if (start == null || end == null) return emptyList()
 		val cal = Calendar.getInstance()
 		cal.time = start
-		val result = mutableListOf<String>()
+		val result = mutableListOf<java.util.Date>()
 		while (!cal.time.after(end)) {
 			val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
 			if (dayOfWeek != Calendar.SATURDAY && dayOfWeek != Calendar.SUNDAY) {
-				result.add(sdfDate.format(cal.time))
+				result.add(cal.time)
 			}
 			cal.add(Calendar.DATE, 1)
 		}
 		return result
 	}
 
-	// rango general usado cuando no se sobreescribe por usuario
-	val rangoDias = workingDatesBetween(inicioDate, finDate)
+	// helper to parse various datetime formats
+	fun parseDateFlexible(fechaHora: String?): java.util.Date? {
+		if (fechaHora.isNullOrBlank()) return null
+		val patterns = listOf("yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd")
+		for (p in patterns) {
+			try {
+				return SimpleDateFormat(p, Locale.getDefault()).parse(fechaHora)
+			} catch (_: Exception) { /* try next */ }
+		}
+		return null
+	}
 
-	val porPersonal = asistencias.groupBy { it.personal?.idPersonal }
+	// Build a map of personalId -> personal (from usuarios and from asistencias)
+	val personalMap = mutableMapOf<Int, com.example.gestindeasistencia.data.models.PersonalDto>()
+	usuarios.forEach { u -> u.personal?.idPersonal?.let { personalMap[it] = u.personal!! } }
+	asistencias.forEach { a ->
+		val pid = a.personal?.idPersonal
+		val p = a.personal
+		if (pid != null && p != null) personalMap.putIfAbsent(pid, p)
+	}
 
-	return porPersonal.mapNotNull { (_, registros) ->
-		val personal = registros.firstOrNull()?.personal ?: return@mapNotNull null
-		val nombre = listOfNotNull(personal.nombre, personal.apellPaterno, personal.apellMaterno).joinToString(" ").ifBlank { "Sin nombre" }
-		val documento = personal.nroDocumento
+	val limiteTardanzaMinutes = 8 * 60 + 15
+
+	val results = mutableListOf<ReportRow>()
+
+	for ((idPersonal, personal) in personalMap) {
+		// registros del personal dentro del conjunto filtrado
+		val registrosPersonal = asistencias.filter { it.personal?.idPersonal == idPersonal }
 
 		// agrupar registros por fecha (yyyy-MM-dd)
-		val registrosPorDia = registros.groupBy { it.fecha?.take(10) ?: "" }
+		val registrosPorFecha = registrosPersonal.groupBy { it.fecha?.take(10) ?: "" }
 
-		var totalAsistencias = 0
+		// determinar inicio efectivo: fechaCreacion + 1 día si existe
+		val usuarioRelacionado = usuarios.firstOrNull { u -> u.personal?.idPersonal != null && u.personal?.idPersonal == idPersonal }
+		val inicioEfectivoDate = usuarioRelacionado?.fechaCreacion?.let { dstr ->
+			parseDateFlexible(dstr)?.let { d ->
+				val c = Calendar.getInstance(); c.time = d; c.add(Calendar.DATE, 1); c.time
+			}
+		}
+
+		// determinar fecha inicio final como max(inicioDate, inicioEfectivoDate)
+		val startDate = when {
+			inicioDate == null && inicioEfectivoDate == null -> null
+			inicioDate == null -> inicioEfectivoDate
+			inicioEfectivoDate == null -> inicioDate
+			else -> if (inicioEfectivoDate.after(inicioDate)) inicioEfectivoDate else inicioDate
+		}
+
+		val diasLaborales = workingDatesBetween(startDate, finDate)
+
+		var diasConMarca = 0
 		var demoras = 0
-		var faltas = 0
 
-		// schedule: expected entrada at 08:00, tardanza if after 08:15
-		val limiteTardanzaMinutes = 8 * 60 + 15 // 08:15 in minutes
+		for (dia in diasLaborales) {
+			val diaStr = sdfDate.format(dia)
+			val marcas = registrosPorFecha[diaStr]
+			if (marcas.isNullOrEmpty()) continue
 
-		fun extractMinutes(fechaHora: String?): Int? {
-			if (fechaHora.isNullOrBlank()) return null
-			// soporte ambos formatos: yyyy-MM-ddTHH:mm:ss o yyyy-MM-dd HH:mm:ss
-			val timePart = when {
-				fechaHora.length >= 16 && (fechaHora[10] == 'T' || fechaHora[10] == ' ') -> fechaHora.substring(11, 16)
-				else -> null
+			// buscar marca de entrada preferible
+			val entryMarcas = marcas.filter { r ->
+				val desc = r.movimiento?.descripcion?.lowercase() ?: ""
+				val cod = r.movimiento?.abreDesc ?: ""
+				desc.contains("entrada") || desc.contains("ingreso") || cod.equals("ENT", true)
 			}
-			return try {
-				timePart?.split(":")?.let { (h, m) -> h.toInt() * 60 + m.toInt() }
-			} catch (e: Exception) { null }
-		}
-
-		// determinar inicio efectivo: si existe usuario relacionado, usar fechaCreacion + 1 día como mínimo
-		val usuarioRelacionado = usuarios.firstOrNull { u -> u.personal?.idPersonal != null && u.personal?.idPersonal == personal.idPersonal }
-		val inicioEfectivoStr = usuarioRelacionado?.fechaCreacion
-		val inicioEfectivoDate = try {
-			if (!inicioEfectivoStr.isNullOrBlank()) {
-				val d = sdfDate.parse(inicioEfectivoStr)
-				// sumar 1 día
-				val c = Calendar.getInstance()
-				if (d != null) {
-					c.time = d
-					c.add(Calendar.DATE, 1)
-					c.time
+			val marca = entryMarcas.minByOrNull { it.fecha ?: "" } ?: marcas.minByOrNull { it.fecha ?: "" }
+			val minutos = marca?.fecha?.let { fh ->
+				val t = parseDateFlexible(fh)
+				if (t != null) {
+					val cal = Calendar.getInstance(); cal.time = t; cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
 				} else null
-			} else null
-		} catch (e: Exception) { null }
-
-		// si hay inicioEfectivoDate, generar rango personal desde esa fecha hasta finDate
-		val rangoDiasPersonal = if (inicioEfectivoDate != null && finDate != null) workingDatesBetween(inicioEfectivoDate, finDate) else rangoDias
-
-		for (dia in rangoDiasPersonal) {
-			val marcasDia = registrosPorDia[dia]
-			if (marcasDia.isNullOrEmpty()) {
-				// no marcó ese día -> falta
-				faltas += 1
-			} else {
-				// Buscar marca de entrada (movimiento abreDesc == ENT o descripción contenga 'entrada' o 'ingreso')
-				val entryMarcas = marcasDia.filter { r ->
-					val desc = r.movimiento?.descripcion?.lowercase() ?: ""
-					val cod = r.movimiento?.abreDesc ?: ""
-					desc.contains("entrada") || desc.contains("ingreso") || cod.equals("ENT", true)
-				}
-
-				val marcaEntry = entryMarcas.minByOrNull { it.fecha ?: "" } ?: marcasDia.minByOrNull { it.fecha ?: "" }
-
-				if (marcaEntry == null) {
-					faltas += 1
-				} else {
-					val minutos = extractMinutes(marcaEntry.fecha) ?: -1
-					totalAsistencias += 1
-					if (minutos > limiteTardanzaMinutes) demoras += 1
-				}
 			}
+			diasConMarca += 1
+			if (minutos != null && minutos > limiteTardanzaMinutes) demoras += 1
 		}
 
-		// descuento: 5% por falta, 2% por tardanza
-		val descuentoPercent = faltas * 5.0 + demoras * 2.0
-		val ultimaFecha = registros.maxByOrNull { it.fecha ?: "" }?.fecha
+		val faltas = diasLaborales.size - diasConMarca
+		val totalAsistencias = diasConMarca
 
-		ReportRow(nombre = nombre, documento = documento, totalAsistencias = totalAsistencias, demoras = demoras, faltas = faltas, descuentoPercent = descuentoPercent, ultimaFecha = ultimaFecha)
+		val descuentoPercent = faltas * 5.0 + demoras * 2.0
+		val nombre = listOfNotNull(personal.nombre, personal.apellPaterno, personal.apellMaterno).joinToString(" ").ifBlank { "Sin nombre" }
+		val documento = personal.nroDocumento
+		val ultimaFecha = registrosPersonal.maxByOrNull { it.fecha ?: "" }?.fecha
+
+		results.add(ReportRow(nombre = nombre, documento = documento, totalAsistencias = totalAsistencias, demoras = demoras, faltas = faltas, descuentoPercent = descuentoPercent, ultimaFecha = ultimaFecha))
 	}
+
+	return results.sortedBy { it.nombre }
 }
 
 fun filtrarAsistencias(asistencias: List<com.example.gestindeasistencia.data.models.AsistenciaDto>, filtroNombre: String, fechaDesde: String, fechaHasta: String): List<com.example.gestindeasistencia.data.models.AsistenciaDto> {
